@@ -10,6 +10,8 @@ export type WallViewMode = 'full' | 'half' | 'low';
 
 export type FloorTextureId = 'grass' | 'wood' | 'marble' | 'tile' | 'dirt' | 'slate' | 'custom';
 
+export type FurnitureCategory = 'bedroom' | 'living' | 'kitchen' | 'bathroom' | 'outdoor' | 'decor' | 'custom';
+
 export interface CustomTextureItem {
   id: string;
   name: string;
@@ -92,13 +94,31 @@ export interface DoorWindow {
   frameColor?: string; // Cor personalizada da moldura
 }
 
+export interface FurnitureCatalogItem {
+  catalogId: string;
+  name: string;
+  category: FurnitureCategory;
+  width: number;  // em metros
+  depth: number;  // em metros (comprimento no chão)
+  height: number; // em metros
+  color: string;
+  textureUrl?: string;
+  primitiveShape?: 'box' | 'cylinder';
+  isCustom?: boolean;
+}
+
 export interface FurnitureItem {
   id: string;
   catalogId: string;
   name: string;
-  x: number; // posição em metros
-  y: number;
-  rotation: number; // em graus (0, 90, 180, 270)
-  width: number;  // dimensão em metros
-  length: number;
+  category: FurnitureCategory;
+  width: number;
+  depth: number;
+  height: number;
+  x: number; // posição X central em metros
+  y: number; // posição Y central em metros
+  rotation: number; // 0, 90, 180, 270 graus
+  color: string;
+  textureUrl?: string;
+  primitiveShape?: 'box' | 'cylinder';
 }

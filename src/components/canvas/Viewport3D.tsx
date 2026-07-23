@@ -1,20 +1,31 @@
 import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { useSimsStore } from '../../store/useSimsStore';
+import type { FloorTextureId } from '../../types/sims';
+
+const FLOOR_COLORS_3D: Record<FloorTextureId, number> = {
+  wood: 0x78350f,
+  marble: 0xf1f5f9,
+  tile: 0x475569,
+  slate: 0x0f172a,
+  grass: 0x047857,
+  dirt: 0x451a03,
+  custom: 0x0ea5e9,
+};
 
 export function Viewport3D() {
-  const containerRef = useRef<HTMLDivElement | null>(null);
-  const { terrain, walls, floors, doorsWindows, wallViewMode } = useSimsStore();
-  const keysPressedRef = useRef<Record<string, boolean>>({});
-
+  const mountRef = useRef<HTMLDivElement | null>(null);
   const textureCacheRef = useRef<Map<string, THREE.Texture>>(new Map());
 
-  // Carrega e armazena em cache texturas Three.js
-  const getThreeTexture = (url?: string) => {
+  const { terrain, walls, floors, doorsWindows, items, wallViewMode } = useSimsStore();
+
+  const getThreeTexture = (url?: string): THREE.Texture | null => {
     if (!url) return null;
     let tex = textureCacheRef.current.get(url);
     if (!tex) {
-      tex = new THREE.TextureLoader().load(url);
+      const loader = new THREE.TextureLoader();
+      tex = loader.load(url);
       tex.wrapS = THREE.RepeatWrapping;
       tex.wrapT = THREE.RepeatWrapping;
       tex.repeat.set(2, 2);
@@ -24,305 +35,253 @@ export function Viewport3D() {
   };
 
   useEffect(() => {
-    const container = containerRef.current;
+    const container = mountRef.current;
     if (!container) return;
-
-    // 1. Configura Cena, Câmera e Renderer WebGL
-    const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x0f172a);
 
     const width = container.clientWidth;
     const height = container.clientHeight;
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x0f172a);
+
     const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
+    const terrainWidth = terrain.width;
+    const terrainLength = terrain.length;
+    camera.position.set(terrainWidth * 0.8, Math.max(terrainWidth, terrainLength) * 0.9, terrainLength * 1.2);
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setSize(width, height);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFShadowMap;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
     container.appendChild(renderer.domElement);
 
-    const terrainCenterX = terrain.width / 2;
-    const terrainCenterZ = terrain.length / 2;
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.target.set(terrainWidth / 2, 0, terrainLength / 2);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
+    controls.maxPolarAngle = Math.PI / 2 - 0.02;
 
-    const targetLookAt = new THREE.Vector3(terrainCenterX, 0, terrainCenterZ);
-    camera.position.set(terrainCenterX, 20, terrainCenterZ + 25);
-    camera.lookAt(targetLookAt);
-
-    // 2. ILUMINAÇÃO (Sol Direcional + Luz Ambiente)
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.85);
+    // ILUMINAÇÃO
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
     scene.add(ambientLight);
 
-    const sunLight = new THREE.DirectionalLight(0xfff7ed, 1.25);
-    sunLight.position.set(terrainCenterX + 20, 35, terrainCenterZ + 15);
-    sunLight.castShadow = true;
-    sunLight.shadow.mapSize.width = 2048;
-    sunLight.shadow.mapSize.height = 2048;
-    sunLight.shadow.camera.near = 0.5;
-    sunLight.shadow.camera.far = 150;
-    sunLight.shadow.camera.left = -40;
-    sunLight.shadow.camera.right = 40;
-    sunLight.shadow.camera.top = 40;
-    sunLight.shadow.camera.bottom = -40;
-    scene.add(sunLight);
+    const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
+    dirLight.position.set(terrainWidth * 1.2, 40, terrainLength * 1.2);
+    dirLight.castShadow = true;
+    dirLight.shadow.mapSize.width = 2048;
+    dirLight.shadow.mapSize.height = 2048;
+    dirLight.shadow.camera.near = 0.5;
+    dirLight.shadow.camera.far = 150;
+    dirLight.shadow.camera.left = -terrainWidth * 1.5;
+    dirLight.shadow.camera.right = terrainWidth * 1.5;
+    dirLight.shadow.camera.top = terrainLength * 1.5;
+    dirLight.shadow.camera.bottom = -terrainLength * 1.5;
+    scene.add(dirLight);
 
-    // 3. TERRENO 3D
-    const terrainGeo = new THREE.PlaneGeometry(terrain.width, terrain.length);
-    const terrain3DTexture = getThreeTexture(terrain.customTextureUrl);
+    // TERRENO BASE 3D
+    const terrainGeo = new THREE.PlaneGeometry(terrainWidth, terrainLength);
+    let terrainMat: THREE.Material;
 
-    const terrainMatParams: THREE.MeshStandardMaterialParameters = {
-      color: terrain3DTexture ? 0xffffff : (terrain.customColor || (terrain.theme === 'grass' ? 0x15803d : 0x0f172a)),
-      roughness: 0.8,
-    };
-    if (terrain3DTexture) terrainMatParams.map = terrain3DTexture;
+    const terrainTex = getThreeTexture(terrain.customTextureUrl);
+    if (terrainTex) {
+      terrainMat = new THREE.MeshStandardMaterial({ map: terrainTex, color: 0xffffff, roughness: 0.8 });
+    } else if (terrain.customColor) {
+      terrainMat = new THREE.MeshStandardMaterial({ color: new THREE.Color(terrain.customColor), roughness: 0.8 });
+    } else {
+      const themeColors: Record<string, number> = {
+        grass: 0x15803d,
+        blueprint: 0x0d3663,
+        dark: 0x0f172a,
+        concrete: 0xe2e8f0,
+      };
+      terrainMat = new THREE.MeshStandardMaterial({
+        color: themeColors[terrain.theme] || 0x15803d,
+        roughness: 0.8,
+      });
+    }
 
-    const terrainMat = new THREE.MeshStandardMaterial(terrainMatParams);
     const terrainMesh = new THREE.Mesh(terrainGeo, terrainMat);
     terrainMesh.rotation.x = -Math.PI / 2;
-    terrainMesh.position.set(terrainCenterX, 0, terrainCenterZ);
+    terrainMesh.position.set(terrainWidth / 2, 0, terrainLength / 2);
     terrainMesh.receiveShadow = true;
     scene.add(terrainMesh);
 
-    // Grid Helper 3D
-    const gridHelper = new THREE.GridHelper(
-      Math.max(terrain.width, terrain.length),
-      Math.max(terrain.width, terrain.length),
-      0x4ade80,
-      0x334155
-    );
-    gridHelper.position.set(terrainCenterX, 0.01, terrainCenterZ);
-    scene.add(gridHelper);
-
-    // 4. PISOS 3D
+    // PISOS PINTADOS 3D
+    const floorTileGeo = new THREE.PlaneGeometry(1, 1);
     Object.values(floors).forEach((floor) => {
-      const tileGeo = new THREE.PlaneGeometry(1, 1);
-      let tileColor = 0x78350f;
-
-      if (floor.textureId === 'marble') tileColor = 0xf1f5f9;
-      else if (floor.textureId === 'tile') tileColor = 0x475569;
-      else if (floor.textureId === 'slate') tileColor = 0x0f172a;
-      else if (floor.textureId === 'grass') tileColor = 0x047857;
-      else if (floor.textureId === 'dirt') tileColor = 0x451a03;
-
-      if (floor.color) {
-        tileColor = parseInt(floor.color.replace('#', ''), 16);
+      let floorMat: THREE.Material;
+      const floorTex = getThreeTexture(floor.customTextureUrl);
+      if (floorTex) {
+        floorMat = new THREE.MeshStandardMaterial({ map: floorTex, color: 0xffffff, roughness: 0.5 });
+      } else if (floor.color) {
+        floorMat = new THREE.MeshStandardMaterial({ color: new THREE.Color(floor.color), roughness: 0.5 });
+      } else {
+        const colorHex = FLOOR_COLORS_3D[floor.textureId] || FLOOR_COLORS_3D.wood;
+        floorMat = new THREE.MeshStandardMaterial({ color: colorHex, roughness: 0.5 });
       }
 
-      const floor3DTexture = getThreeTexture(floor.customTextureUrl);
-
-      const tileMatParams: THREE.MeshStandardMaterialParameters = {
-        color: floor3DTexture ? 0xffffff : tileColor,
-        roughness: 0.4,
-      };
-      if (floor3DTexture) tileMatParams.map = floor3DTexture;
-
-      const tileMat = new THREE.MeshStandardMaterial(tileMatParams);
-      const tileMesh = new THREE.Mesh(tileGeo, tileMat);
+      const tileMesh = new THREE.Mesh(floorTileGeo, floorMat);
       tileMesh.rotation.x = -Math.PI / 2;
-      tileMesh.position.set(floor.x + 0.5, 0.02, floor.y + 0.5);
+      tileMesh.position.set(floor.x + 0.5, 0.01, floor.y + 0.5);
       tileMesh.receiveShadow = true;
       scene.add(tileMesh);
     });
 
-    // 5. PAREDES 3D COM MATERIAIS INDEPENDENTES DUAL-FACE (LADO A & LADO B)
-    let wallHeight = 2.8;
-    if (wallViewMode === 'half') wallHeight = 1.4;
-    else if (wallViewMode === 'low') wallHeight = 0.2;
+    // PAREDES 3D DUAL-FACE COM ALTURA DINÂMICA E ESQUADRIAS
+    const wallHeight = wallViewMode === 'full' ? 2.8 : wallViewMode === 'half' ? 1.4 : 0.2;
+    const isTransparent = wallViewMode === 'half';
 
     walls.forEach((wall) => {
       const dx = wall.x2 - wall.x1;
-      const dz = wall.y2 - wall.y1;
-      const wallLen = Math.hypot(dx, dz);
-      if (wallLen < 0.1) return;
+      const dy = wall.y2 - wall.y1;
+      const len = Math.hypot(dx, dy);
+      if (len === 0) return;
 
-      const angle = Math.atan2(dz, dx);
+      const angle = Math.atan2(dy, dx);
       const midX = (wall.x1 + wall.x2) / 2;
-      const midZ = (wall.y1 + wall.y2) / 2;
+      const midY = (wall.y1 + wall.y2) / 2;
+      const thickness = wall.thickness || 0.2;
 
-      const wallThickness = wall.thickness || 0.2;
-      const wallGeo = new THREE.BoxGeometry(wallLen, wallHeight, wallThickness);
+      // Materiais das 6 faces da parede
+      const sideATex = getThreeTexture(wall.textureUrlSideA || wall.textureUrl);
+      const sideBTex = getThreeTexture(wall.textureUrlSideB || wall.textureUrl);
 
-      // MATERIAL LADO A (Frente / Interno)
-      const colorNumA = wall.colorSideA ? parseInt(wall.colorSideA.replace('#', ''), 16) : 0xf1f5f9;
-      const texA = getThreeTexture(wall.textureUrlSideA || wall.textureUrl);
+      const matA = sideATex
+        ? new THREE.MeshStandardMaterial({ map: sideATex, color: 0xffffff, transparent: isTransparent, opacity: isTransparent ? 0.75 : 1 })
+        : new THREE.MeshStandardMaterial({ color: new THREE.Color(wall.colorSideA || wall.color || '#E2E8F0'), transparent: isTransparent, opacity: isTransparent ? 0.75 : 1 });
 
-      const matParamsA: THREE.MeshStandardMaterialParameters = {
-        color: texA ? 0xffffff : colorNumA,
-        roughness: 0.6,
-        transparent: wallViewMode === 'half',
-        opacity: wallViewMode === 'half' ? 0.75 : 1.0,
-      };
-      if (texA) matParamsA.map = texA;
-      const matA = new THREE.MeshStandardMaterial(matParamsA);
+      const matB = sideBTex
+        ? new THREE.MeshStandardMaterial({ map: sideBTex, color: 0xffffff, transparent: isTransparent, opacity: isTransparent ? 0.75 : 1 })
+        : new THREE.MeshStandardMaterial({ color: new THREE.Color(wall.colorSideB || wall.color || '#CBD5E1'), transparent: isTransparent, opacity: isTransparent ? 0.75 : 1 });
 
-      // MATERIAL LADO B (Verso / Externo)
-      const colorNumB = wall.colorSideB ? parseInt(wall.colorSideB.replace('#', ''), 16) : 0xcbd5e1;
-      const texB = getThreeTexture(wall.textureUrlSideB || wall.textureUrl);
+      const capMat = new THREE.MeshStandardMaterial({ color: 0x475569, transparent: isTransparent, opacity: isTransparent ? 0.75 : 1 });
 
-      const matParamsB: THREE.MeshStandardMaterialParameters = {
-        color: texB ? 0xffffff : colorNumB,
-        roughness: 0.6,
-        transparent: wallViewMode === 'half',
-        opacity: wallViewMode === 'half' ? 0.75 : 1.0,
-      };
-      if (texB) matParamsB.map = texB;
-      const matB = new THREE.MeshStandardMaterial(matParamsB);
+      const materials = [capMat, capMat, capMat, capMat, matA, matB];
 
-      // Material das extremidades (neutro)
-      const capMat = new THREE.MeshStandardMaterial({
-        color: 0x94a3b8,
-        roughness: 0.7,
-        transparent: wallViewMode === 'half',
-        opacity: wallViewMode === 'half' ? 0.75 : 1.0,
-      });
-
-      // Array de 6 materiais Three.js para as faces da caixa
-      // [right, left, top, bottom, front (Side A), back (Side B)]
-      const materialsArray = [capMat, capMat, capMat, capMat, matA, matB];
-
-      const wallMesh = new THREE.Mesh(wallGeo, materialsArray);
-      wallMesh.position.set(midX, wallHeight / 2, midZ);
-      wallMesh.rotation.y = -angle;
+      const wallGeo = new THREE.BoxGeometry(thickness, wallHeight, len);
+      const wallMesh = new THREE.Mesh(wallGeo, materials);
+      wallMesh.position.set(midX, wallHeight / 2, midY);
+      wallMesh.rotation.y = -angle + Math.PI / 2;
       wallMesh.castShadow = true;
       wallMesh.receiveShadow = true;
       scene.add(wallMesh);
-
-      // MOLDURAS, MAÇANETAS E VIDROS EM 3D
-      const wallDoorsWindows = doorsWindows.filter((dw) => dw.wallId === wall.id);
-      wallDoorsWindows.forEach((dw) => {
-        const dwPxWidth = dw.width;
-        const dwHeight = dw.height || (dw.type === 'door' ? 2.1 : 1.2);
-        const dwYOffset = dw.type === 'door' ? dwHeight / 2 : 1.4;
-
-        if (dwYOffset > wallHeight) return;
-
-        const posAlong = (dw.offsetRatio - 0.5) * wallLen;
-        const posX = midX + Math.cos(angle) * posAlong;
-        const posZ = midZ + Math.sin(angle) * posAlong;
-
-        let frameColorNum = dw.type === 'door' ? 0x78350f : 0x1e293b;
-        if (dw.frameColor) {
-          frameColorNum = parseInt(dw.frameColor.replace('#', ''), 16);
-        }
-
-        if (dw.type === 'door') {
-          const frameGeo = new THREE.BoxGeometry(dwPxWidth, dwHeight, wallThickness + 0.04);
-          const frameMat = new THREE.MeshStandardMaterial({ color: frameColorNum, roughness: 0.5 });
-          const frameMesh = new THREE.Mesh(frameGeo, frameMat);
-          frameMesh.position.set(posX, dwHeight / 2, posZ);
-          frameMesh.rotation.y = -angle;
-          scene.add(frameMesh);
-
-          const handleGeo = new THREE.SphereGeometry(0.06, 12, 12);
-          const handleMat = new THREE.MeshStandardMaterial({ color: 0xfacc15, metalness: 0.9, roughness: 0.1 });
-          const handleMesh = new THREE.Mesh(handleGeo, handleMat);
-
-          const handleOffset = (dwPxWidth / 2) - 0.12;
-          const handleX = posX + Math.cos(angle) * handleOffset;
-          const handleZ = posZ + Math.sin(angle) * handleOffset;
-
-          handleMesh.position.set(handleX, 1.0, handleZ);
-          scene.add(handleMesh);
-        } else {
-          const frameGeo = new THREE.BoxGeometry(dwPxWidth, dwHeight, wallThickness + 0.04);
-          const frameMat = new THREE.MeshStandardMaterial({ color: frameColorNum, roughness: 0.3 });
-          const frameMesh = new THREE.Mesh(frameGeo, frameMat);
-          frameMesh.position.set(posX, 1.4, posZ);
-          frameMesh.rotation.y = -angle;
-          scene.add(frameMesh);
-
-          const glassGeo = new THREE.PlaneGeometry(dwPxWidth - 0.1, dwHeight - 0.1);
-          const glassMat = new THREE.MeshPhysicalMaterial({
-            color: 0x38bdf8,
-            transparent: true,
-            opacity: 0.45,
-            roughness: 0.1,
-            metalness: 0.1,
-            clearcoat: 1.0,
-            clearcoatRoughness: 0.1,
-          });
-          const glassMesh = new THREE.Mesh(glassGeo, glassMat);
-          glassMesh.position.set(posX, 1.4, posZ);
-          glassMesh.rotation.y = -angle;
-          scene.add(glassMesh);
-        }
-      });
     });
 
-    // 6. NAVEGAÇÃO 3D (MOUSE ORBIT, WASD, Q/E ROTATE & ZCX ZOOM)
-    let isMouseDown = false;
-    let previousMousePosition = { x: 0, y: 0 };
+    // ESQUADRIAS 3D (PORTAS E JANELAS)
+    doorsWindows.forEach((dw) => {
+      const wall = walls.find((w) => w.id === dw.wallId);
+      if (!wall) return;
 
-    const onMouseDown = (e: MouseEvent) => {
-      if (e.button === 0 || e.button === 2) {
-        isMouseDown = true;
-        previousMousePosition = { x: e.clientX, y: e.clientY };
+      const angle = Math.atan2(wall.y2 - wall.y1, wall.x2 - wall.x1);
+      const dwX = wall.x1 + (wall.x2 - wall.x1) * dw.offsetRatio;
+      const dwY = wall.y1 + (wall.y2 - wall.y1) * dw.offsetRatio;
+      const dwWidth = dw.width;
+      const dwHeight = dw.height || (dw.type === 'door' ? 2.1 : 1.2);
+      const frameColor = dw.frameColor || (dw.type === 'door' ? '#F59E0B' : '#38BDF8');
+
+      const dwGroup = new THREE.Group();
+      dwGroup.position.set(dwX, dw.type === 'door' ? dwHeight / 2 : 1.2, dwY);
+      dwGroup.rotation.y = -angle;
+
+      const frameMat = new THREE.MeshStandardMaterial({ color: new THREE.Color(frameColor), roughness: 0.4 });
+      const frameGeo = new THREE.BoxGeometry(dwWidth, dwHeight, 0.22);
+      const frameMesh = new THREE.Mesh(frameGeo, frameMat);
+      frameMesh.castShadow = true;
+      dwGroup.add(frameMesh);
+
+      if (dw.type === 'window') {
+        const glassMat = new THREE.MeshPhysicalMaterial({
+          color: 0x38bdf8,
+          transmission: 0.85,
+          opacity: 1,
+          transparent: true,
+          roughness: 0.1,
+          ior: 1.5,
+        });
+        const glassGeo = new THREE.BoxGeometry(dwWidth * 0.85, dwHeight * 0.75, 0.05);
+        const glassMesh = new THREE.Mesh(glassGeo, glassMat);
+        dwGroup.add(glassMesh);
       }
-    };
 
-    const onMouseMove = (e: MouseEvent) => {
-      if (!isMouseDown) return;
+      scene.add(dwGroup);
+    });
 
-      const deltaX = e.clientX - previousMousePosition.x;
-      const deltaY = e.clientY - previousMousePosition.y;
+    // FASE 3: MÓVEIS COLOCADOS EM 3D (`items`)
+    items.forEach((item) => {
+      const furnGroup = new THREE.Group();
+      furnGroup.position.set(item.x, item.height / 2, item.y);
+      furnGroup.rotation.y = (-item.rotation * Math.PI) / 180;
 
-      const radius = camera.position.distanceTo(targetLookAt);
-      let theta = Math.atan2(camera.position.x - targetLookAt.x, camera.position.z - targetLookAt.z);
-      let phi = Math.acos((camera.position.y - targetLookAt.y) / radius);
-
-      theta -= deltaX * 0.008;
-      phi = Math.max(0.1, Math.min(Math.PI / 2 - 0.05, phi - deltaY * 0.008));
-
-      camera.position.x = targetLookAt.x + radius * Math.sin(phi) * Math.sin(theta);
-      camera.position.y = targetLookAt.y + radius * Math.cos(phi);
-      camera.position.z = targetLookAt.z + radius * Math.sin(phi) * Math.cos(theta);
-
-      camera.lookAt(targetLookAt);
-      previousMousePosition = { x: e.clientX, y: e.clientY };
-    };
-
-    const onMouseUp = () => {
-      isMouseDown = false;
-    };
-
-    const onWheel = (e: WheelEvent) => {
-      const zoomFactor = e.deltaY > 0 ? 1.08 : 0.92;
-      camera.position.x = targetLookAt.x + (camera.position.x - targetLookAt.x) * zoomFactor;
-      camera.position.y = Math.max(3, camera.position.y * zoomFactor);
-      camera.position.z = targetLookAt.z + (camera.position.z - targetLookAt.z) * zoomFactor;
-      camera.lookAt(targetLookAt);
-    };
-
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (['INPUT', 'TEXTAREA', 'SELECT'].includes((e.target as HTMLElement)?.tagName)) return;
-      keysPressedRef.current[e.code] = true;
-
-      if (e.code === 'KeyZ') {
-        camera.position.x = targetLookAt.x + (camera.position.x - targetLookAt.x) * 0.85;
-        camera.position.y = Math.max(3, camera.position.y * 0.85);
-        camera.position.z = targetLookAt.z + (camera.position.z - targetLookAt.z) * 0.85;
-      } else if (e.code === 'KeyC') {
-        camera.position.x = targetLookAt.x + (camera.position.x - targetLookAt.x) * 1.15;
-        camera.position.y = camera.position.y * 1.15;
-        camera.position.z = targetLookAt.z + (camera.position.z - targetLookAt.z) * 1.15;
-      } else if (e.code === 'KeyX') {
-        camera.position.set(terrainCenterX, 20, terrainCenterZ + 25);
-        targetLookAt.set(terrainCenterX, 0, terrainCenterZ);
+      let furnMat: THREE.Material;
+      const furnTex = getThreeTexture(item.textureUrl);
+      if (furnTex) {
+        furnMat = new THREE.MeshStandardMaterial({ map: furnTex, color: 0xffffff, roughness: 0.4 });
+      } else {
+        furnMat = new THREE.MeshStandardMaterial({ color: new THREE.Color(item.color), roughness: 0.4 });
       }
-    };
 
-    const onKeyUp = (e: KeyboardEvent) => {
-      delete keysPressedRef.current[e.code];
-    };
+      if (item.primitiveShape === 'cylinder') {
+        const cylinderGeo = new THREE.CylinderGeometry(item.width / 2, item.width / 2, item.height, 24);
+        const cylinderMesh = new THREE.Mesh(cylinderGeo, furnMat);
+        cylinderMesh.castShadow = true;
+        cylinderMesh.receiveShadow = true;
+        furnGroup.add(cylinderMesh);
 
-    const domEl = renderer.domElement;
-    domEl.addEventListener('mousedown', onMouseDown);
-    window.addEventListener('mousemove', onMouseMove);
-    window.addEventListener('mouseup', onMouseUp);
-    domEl.addEventListener('wheel', onWheel);
-    window.addEventListener('keydown', onKeyDown);
-    window.addEventListener('keyup', onKeyUp);
+        // Detalhe 3D extra se for árvore/planta
+        if (item.category === 'outdoor' || item.catalogId.includes('plant')) {
+          const canopyMat = new THREE.MeshStandardMaterial({ color: 0x15803d, roughness: 0.6 });
+          const canopyGeo = new THREE.SphereGeometry(item.width * 0.6, 16, 16);
+          const canopyMesh = new THREE.Mesh(canopyGeo, canopyMat);
+          canopyMesh.position.set(0, item.height * 0.5, 0);
+          canopyMesh.castShadow = true;
+          furnGroup.add(canopyMesh);
+        }
+      } else {
+        const boxGeo = new THREE.BoxGeometry(item.width, item.height, item.depth);
+        const boxMesh = new THREE.Mesh(boxGeo, furnMat);
+        boxMesh.castShadow = true;
+        boxMesh.receiveShadow = true;
+        furnGroup.add(boxMesh);
+
+        // Detalhes 3D extras para móveis específicos
+        if (item.category === 'bedroom' || item.catalogId.includes('bed')) {
+          // Travesseiros 3D
+          const pillowMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.3 });
+          const pillowGeo = new THREE.BoxGeometry(item.width * 0.38, 0.12, item.depth * 0.22);
+
+          const pillow1 = new THREE.Mesh(pillowGeo, pillowMat);
+          pillow1.position.set(-item.width * 0.22, item.height / 2 + 0.06, -item.depth * 0.32);
+          pillow1.castShadow = true;
+          furnGroup.add(pillow1);
+
+          const pillow2 = new THREE.Mesh(pillowGeo, pillowMat);
+          pillow2.position.set(item.width * 0.22, item.height / 2 + 0.06, -item.depth * 0.32);
+          pillow2.castShadow = true;
+          furnGroup.add(pillow2);
+        } else if (item.catalogId.includes('tv_unit')) {
+          // Tela de TV 3D
+          const tvMat = new THREE.MeshStandardMaterial({ color: 0x050505, roughness: 0.1, metalness: 0.8 });
+          const tvGeo = new THREE.BoxGeometry(item.width * 0.8, 0.7, 0.06);
+          const tvMesh = new THREE.Mesh(tvGeo, tvMat);
+          tvMesh.position.set(0, item.height / 2 + 0.4, 0);
+          tvMesh.castShadow = true;
+          furnGroup.add(tvMesh);
+        }
+      }
+
+      scene.add(furnGroup);
+    });
+
+    // LOOP DE ANIMAÇÃO
+    let animationFrameId: number;
+    const animate = () => {
+      animationFrameId = requestAnimationFrame(animate);
+      controls.update();
+      renderer.render(scene, camera);
+    };
+    animate();
 
     const handleResize = () => {
       if (!container) return;
@@ -334,81 +293,16 @@ export function Viewport3D() {
     };
     window.addEventListener('resize', handleResize);
 
-    // Loop de Renderização & Navegação WASD / QE 3D
-    let reqId: number;
-    const speed = 0.35;
-    const rotateSpeed = 0.025;
-
-    const animate = () => {
-      reqId = requestAnimationFrame(animate);
-
-      const keys = keysPressedRef.current;
-
-      if (keys['KeyQ'] || keys['KeyE']) {
-        const radius = camera.position.distanceTo(targetLookAt);
-        let theta = Math.atan2(camera.position.x - targetLookAt.x, camera.position.z - targetLookAt.z);
-        const phi = Math.acos((camera.position.y - targetLookAt.y) / radius);
-
-        if (keys['KeyQ']) theta += rotateSpeed;
-        if (keys['KeyE']) theta -= rotateSpeed;
-
-        camera.position.x = targetLookAt.x + radius * Math.sin(phi) * Math.sin(theta);
-        camera.position.z = targetLookAt.z + radius * Math.sin(phi) * Math.cos(theta);
-      }
-
-      const forward = new THREE.Vector3();
-      camera.getWorldDirection(forward);
-      forward.y = 0;
-      forward.normalize();
-
-      const side = new THREE.Vector3().crossVectors(forward, new THREE.Vector3(0, 1, 0)).normalize();
-
-      if (keys['KeyW'] || keys['ArrowUp']) {
-        camera.position.addScaledVector(forward, speed);
-        targetLookAt.addScaledVector(forward, speed);
-      }
-      if (keys['KeyS'] || keys['ArrowDown']) {
-        camera.position.addScaledVector(forward, -speed);
-        targetLookAt.addScaledVector(forward, -speed);
-      }
-      if (keys['KeyA'] || keys['ArrowLeft']) {
-        camera.position.addScaledVector(side, -speed);
-        targetLookAt.addScaledVector(side, -speed);
-      }
-      if (keys['KeyD'] || keys['ArrowRight']) {
-        camera.position.addScaledVector(side, speed);
-        targetLookAt.addScaledVector(side, speed);
-      }
-
-      camera.lookAt(targetLookAt);
-      renderer.render(scene, camera);
-    };
-    animate();
-
     return () => {
-      cancelAnimationFrame(reqId);
+      cancelAnimationFrame(animationFrameId);
       window.removeEventListener('resize', handleResize);
-      window.removeEventListener('keydown', onKeyDown);
-      window.removeEventListener('keyup', onKeyUp);
-      domEl.removeEventListener('mousedown', onMouseDown);
-      window.removeEventListener('mousemove', onMouseMove);
-      window.removeEventListener('mouseup', onMouseUp);
-      domEl.removeEventListener('wheel', onWheel);
+      controls.dispose();
+      renderer.dispose();
       if (container.contains(renderer.domElement)) {
         container.removeChild(renderer.domElement);
       }
-      renderer.dispose();
     };
-  }, [terrain, walls, floors, doorsWindows, wallViewMode]);
+  }, [terrain, walls, floors, doorsWindows, items, wallViewMode]);
 
-  return (
-    <div className="relative w-full h-full overflow-hidden bg-slate-950 select-none">
-      <div ref={containerRef} className="w-full h-full block cursor-grab active:cursor-grabbing" />
-
-      <div className="absolute top-4 left-6 z-20 px-3.5 py-1.5 rounded-2xl bg-slate-900/85 backdrop-blur-md border border-slate-800/90 text-xs text-slate-300 shadow-xl flex items-center gap-2 pointer-events-none">
-        <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
-        <span>Modo 3D • <strong>WASD</strong> Mover • <strong>Q/E</strong> Girar • <strong>Z/C/X</strong> Zoom • Arraste para Orbitar</span>
-      </div>
-    </div>
-  );
+  return <div ref={mountRef} className="w-full h-full block bg-slate-950" />;
 }

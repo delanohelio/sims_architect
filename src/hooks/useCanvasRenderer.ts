@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useSimsStore } from '../store/useSimsStore';
-import type { TerrainTheme, FloorTextureId, Wall } from '../types/sims';
+import type { TerrainTheme, FloorTextureId, Wall, FurnitureItem } from '../types/sims';
 
 interface ThemeStyles {
   bg: string;
@@ -83,8 +83,20 @@ export function useCanvasRenderer(
   previews?: {
     draftWall?: { x1: number; y1: number; x2: number; y2: number } | null;
     draftFloorRect?: { x1: number; y1: number; x2: number; y2: number } | null;
-    hoveredTarget?: { type: string; id?: string; x?: number; y?: number; wall?: Wall } | null;
+    hoveredTarget?: { type: string; id?: string; x?: number; y?: number; wall?: Wall; furniture?: FurnitureItem } | null;
     hoveredWallTarget?: { wall: Wall; offsetRatio: number; pointOnWall: { x: number; y: number } } | null;
+    pendingFurniturePreview?: {
+      x: number;
+      y: number;
+      width: number;
+      depth: number;
+      height: number;
+      rotation: number;
+      color: string;
+      textureUrl?: string;
+      primitiveShape?: 'box' | 'cylinder';
+      isValid: boolean;
+    } | null;
   }
 ) {
   const { 
@@ -95,7 +107,8 @@ export function useCanvasRenderer(
     walls, 
     floors, 
     doorsWindows, 
-    wallViewMode,
+    items,
+    activeMode,
     activeBuildTool,
     selectedDoorWindow,
     pendingDoor 
@@ -387,7 +400,42 @@ export function useCanvasRenderer(
         ctx.restore();
       });
 
-      // 7. SOMBREAMENTO ALINHADO DIRETO COM O CURSOR DO MOUSE (`wall_paint`)
+      // 7. RENDERIZAÇÃO DOS MÓVEIS 2D COLOCADOS (`items`)
+      items.forEach((item) => {
+        const isHovered = previews?.hoveredTarget?.type === 'furniture' && previews.hoveredTarget.id === item.id;
+        renderFurniture2D(ctx, item, cellSize, viewState.zoom, getLoadedImage, false, isHovered);
+      });
+
+      // 8. FANTASMA DE PREVIEW DE POSICIONAMENTO DE MÓVEL
+      if (previews?.pendingFurniturePreview) {
+        const p = previews.pendingFurniturePreview;
+        renderFurniture2D(
+          ctx,
+          {
+            id: 'preview',
+            catalogId: 'preview',
+            name: 'Preview',
+            category: 'bedroom',
+            width: p.width,
+            depth: p.depth,
+            height: p.height,
+            x: p.x,
+            y: p.y,
+            rotation: p.rotation,
+            color: p.color,
+            textureUrl: p.textureUrl,
+            primitiveShape: p.primitiveShape,
+          },
+          cellSize,
+          viewState.zoom,
+          getLoadedImage,
+          true,
+          false,
+          p.isValid
+        );
+      }
+
+      // 9. SOMBREAMENTO EXTENSIVO DE ALCANCE DA FERRAMENTA PINTAR PAREDE (`wall_paint`)
       if (activeBuildTool === 'wall_paint' && previews?.hoveredWallTarget && cursorPos.x !== null && cursorPos.y !== null) {
         const { wall } = previews.hoveredWallTarget;
         const x1 = wall.x1 * cellSize;
@@ -427,12 +475,10 @@ export function useCanvasRenderer(
             ctx.fill();
             ctx.stroke();
           } else {
-            // PRODUTO ESCALAR COM O VETOR NORMAL (nx, ny) PARA CORRESPONDER EXATAMENTE AO CURSOR DO MOUSE!
             const dotNormal = (cursorPos.x - projX) * nx + (cursorPos.y - projY) * ny;
             const isSideA = dotNormal > 0;
 
             if (isSideA) {
-              // SOMBRA PROJETADA EXATAMENTE NO LADO DO MOUSE (LADO A: +nx, +ny)
               ctx.fillStyle = 'rgba(6, 182, 212, 0.45)';
               ctx.strokeStyle = '#38BDF8';
               ctx.lineWidth = 2 / viewState.zoom;
@@ -446,7 +492,6 @@ export function useCanvasRenderer(
               ctx.fill();
               ctx.stroke();
             } else {
-              // SOMBRA PROJETADA EXATAMENTE NO LADO DO MOUSE (LADO B: -nx, -ny)
               ctx.fillStyle = 'rgba(168, 85, 247, 0.45)';
               ctx.strokeStyle = '#C084FC';
               ctx.lineWidth = 2 / viewState.zoom;
@@ -466,7 +511,7 @@ export function useCanvasRenderer(
         }
       }
 
-      // 8. OVERLAY DOS PASSO DE COLOCAÇÃO DA PORTA
+      // OVERLAY DOS PASSO DE COLOCAÇÃO DA PORTA
       if (pendingDoor) {
         const wall = walls.find((w) => w.id === pendingDoor.wallId);
         if (wall) {
@@ -638,11 +683,23 @@ export function useCanvasRenderer(
           ctx.fillStyle = 'rgba(239, 68, 68, 0.4)';
           ctx.fillRect(ht.x * cellSize, ht.y * cellSize, cellSize, cellSize);
           ctx.strokeRect(ht.x * cellSize, ht.y * cellSize, cellSize, cellSize);
+        } else if (ht.type === 'furniture' && ht.furniture) {
+          const furn = ht.furniture;
+          const pxX = furn.x * cellSize;
+          const pxY = furn.y * cellSize;
+          const pxW = furn.width * cellSize;
+          const pxD = furn.depth * cellSize;
+
+          ctx.translate(pxX, pxY);
+          ctx.rotate((furn.rotation * Math.PI) / 180);
+          ctx.fillStyle = 'rgba(239, 68, 68, 0.4)';
+          ctx.fillRect(-pxW / 2, -pxD / 2, pxW, pxD);
+          ctx.strokeRect(-pxW / 2, -pxD / 2, pxW, pxD);
         }
         ctx.restore();
       }
 
-      // 9. Borda Externa do Terreno & Origem
+      // Borda Externa do Terreno & Origem
       ctx.strokeStyle = theme.borderColor;
       ctx.lineWidth = 3 / viewState.zoom;
       ctx.strokeRect(0, 0, terrainWidthPx, terrainLengthPx);
@@ -678,5 +735,106 @@ export function useCanvasRenderer(
     return () => {
       cancelAnimationFrame(animationFrameId);
     };
-  }, [canvasRef, terrain, viewState, gridSettings, cursorPos, walls, floors, doorsWindows, wallViewMode, activeBuildTool, selectedDoorWindow, pendingDoor, previews]);
+  }, [canvasRef, terrain, viewState, gridSettings, cursorPos, walls, floors, doorsWindows, items, activeMode, activeBuildTool, selectedDoorWindow, pendingDoor, previews]);
+}
+
+// DESENHO ARQUITETÔNICO TOP-DOWN DOS MÓVEIS EM 2D
+function renderFurniture2D(
+  ctx: CanvasRenderingContext2D,
+  item: FurnitureItem,
+  cellSize: number,
+  zoom: number,
+  getLoadedImage: (url?: string) => HTMLImageElement | null,
+  isPreview = false,
+  isHovered = false,
+  isValid = true
+) {
+  const pxX = item.x * cellSize;
+  const pxY = item.y * cellSize;
+  const pxW = item.width * cellSize;
+  const pxD = item.depth * cellSize;
+
+  ctx.save();
+  ctx.translate(pxX, pxY);
+  ctx.rotate((item.rotation * Math.PI) / 180);
+
+  if (isPreview) {
+    ctx.fillStyle = isValid ? 'rgba(6, 182, 212, 0.45)' : 'rgba(239, 68, 68, 0.45)';
+    ctx.strokeStyle = isValid ? '#38BDF8' : '#EF4444';
+    ctx.lineWidth = 2 / zoom;
+
+    if (item.primitiveShape === 'cylinder') {
+      ctx.beginPath();
+      ctx.ellipse(0, 0, pxW / 2, pxD / 2, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+    } else {
+      ctx.fillRect(-pxW / 2, -pxD / 2, pxW, pxD);
+      ctx.strokeRect(-pxW / 2, -pxD / 2, pxW, pxD);
+    }
+  } else {
+    // DESENHO OFICIAL DO MÓVEL POSICIONADO
+    const img = getLoadedImage(item.textureUrl);
+    if (img) {
+      const pattern = ctx.createPattern(img, 'repeat');
+      ctx.fillStyle = pattern || item.color || '#3B82F6';
+    } else {
+      ctx.fillStyle = item.color || '#3B82F6';
+    }
+
+    ctx.strokeStyle = isHovered ? '#FACC15' : '#0F172A';
+    ctx.lineWidth = (isHovered ? 3 : 1.5) / zoom;
+
+    if (item.primitiveShape === 'cylinder') {
+      ctx.beginPath();
+      ctx.ellipse(0, 0, pxW / 2, pxD / 2, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+
+      // Detalhe de copa vegetal se for árvore/planta
+      ctx.fillStyle = '#166534';
+      ctx.beginPath();
+      ctx.ellipse(0, 0, pxW * 0.35, pxD * 0.35, 0, 0, Math.PI * 2);
+      ctx.fill();
+    } else {
+      ctx.fillRect(-pxW / 2, -pxD / 2, pxW, pxD);
+      ctx.strokeRect(-pxW / 2, -pxD / 2, pxW, pxD);
+
+      // DETALHES ARQUITETÔNICOS ESPECÍFICOS TOP-DOWN
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.25)';
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+      ctx.lineWidth = 1 / zoom;
+
+      if (item.category === 'bedroom' || item.catalogId.includes('bed')) {
+        // Cama: Travesseiros na cabeceira superior
+        const pillowW = pxW * 0.38;
+        const pillowD = pxD * 0.22;
+        ctx.fillRect(-pxW * 0.4, -pxD / 2 + 4 / zoom, pillowW, pillowD);
+        ctx.fillRect(pxW * 0.4 - pillowW, -pxD / 2 + 4 / zoom, pillowW, pillowD);
+        ctx.strokeRect(-pxW * 0.4, -pxD / 2 + 4 / zoom, pillowW, pillowD);
+        ctx.strokeRect(pxW * 0.4 - pillowW, -pxD / 2 + 4 / zoom, pillowW, pillowD);
+      } else if (item.category === 'living' || item.catalogId.includes('sofa')) {
+        // Sofá: Encosto traseiro
+        ctx.fillRect(-pxW / 2, -pxD / 2, pxW, pxD * 0.25);
+        ctx.strokeRect(-pxW / 2, -pxD / 2, pxW, pxD * 0.25);
+      } else if (item.category === 'kitchen' || item.catalogId.includes('fridge')) {
+        // Geladeira: Divisória de porta
+        ctx.beginPath();
+        ctx.moveTo(-pxW / 2, 0);
+        ctx.lineTo(pxW / 2, 0);
+        ctx.stroke();
+      }
+    }
+
+    // Rótulo do Móvel em Zoom Aproximado
+    if (zoom >= 0.8) {
+      ctx.fillStyle = '#F8FAFC';
+      ctx.font = `bold ${Math.max(9, Math.min(12, 11 / zoom))}px Inter, sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(item.name, 0, 0);
+    }
+  }
+
+  ctx.restore();
 }

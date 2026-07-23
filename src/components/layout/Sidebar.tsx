@@ -1,5 +1,6 @@
 import { useSimsStore } from '../../store/useSimsStore';
 import { BuildSidebar } from './BuildSidebar';
+import { BuySidebar } from './BuySidebar';
 import { Inspection3DSidebar } from './Inspection3DSidebar';
 import { SettingsSidebar } from './SettingsSidebar';
 
@@ -14,6 +15,11 @@ export function Sidebar() {
   // Se estiver no Modo 2D e no modo de Construção, exibe as ferramentas de construção
   if (activeMode === 'build') {
     return <BuildSidebar />;
+  }
+
+  // Se estiver no Modo 2D e no modo Compra, exibe a Sidebar do Modo Compra
+  if (activeMode === 'buy') {
+    return <BuySidebar />;
   }
 
   // Se estiver no Modo 2D e no modo de Configurações (ou padrão), exibe o painel de configurações do terreno

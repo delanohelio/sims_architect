@@ -1,14 +1,15 @@
 import { useState, useEffect } from 'react';
 import { useSimsStore } from '../store/useSimsStore';
-import type { Wall, DoorWindow } from '../types/sims';
+import type { Wall, DoorWindow, FurnitureItem } from '../types/sims';
 
 interface HoveredTarget {
-  type: 'wall' | 'floor' | 'door_window';
+  type: 'wall' | 'floor' | 'door_window' | 'furniture';
   id?: string;
   x?: number;
   y?: number;
   wall?: Wall;
   doorWindow?: DoorWindow;
+  furniture?: FurnitureItem;
 }
 
 interface HoveredWallTarget {
@@ -21,6 +22,7 @@ export function useBuildInteractions() {
   const {
     activeMode,
     activeBuildTool,
+    terrain,
     selectedFloorTexture,
     selectedFloorColor,
     selectedFloorCustomTexture,
@@ -34,7 +36,9 @@ export function useBuildInteractions() {
     walls,
     floors,
     doorsWindows,
+    items,
     pendingDoor,
+    pendingFurnitureItem,
     addWall,
     paintWall,
     removeWall,
@@ -42,8 +46,15 @@ export function useBuildInteractions() {
     eraseFloorRect,
     removeFloorTile,
     setPendingDoor,
+    cancelPendingDoor,
     addDoorWindow,
     removeDoorWindow,
+    setPendingFurnitureItem,
+    rotatePendingFurnitureItem,
+    cancelPendingFurnitureItem,
+    addItem,
+    updateItemPosition,
+    removeItem,
   } = useSimsStore();
 
   const [isDrawingWall, setIsDrawingWall] = useState(false);
@@ -60,8 +71,18 @@ export function useBuildInteractions() {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (['INPUT', 'TEXTAREA', 'SELECT'].includes((e.target as HTMLElement)?.tagName)) return;
+
       if (e.code === 'Space') {
         setIsSpacePressed(true);
+      }
+
+      if (e.code === 'KeyR' || e.key === 'r' || e.key === 'R') {
+        rotatePendingFurnitureItem();
+      }
+
+      if (e.code === 'Escape') {
+        cancelPendingDoor();
+        cancelPendingFurnitureItem();
       }
     };
 
@@ -78,14 +99,72 @@ export function useBuildInteractions() {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
     };
-  }, []);
+  }, [rotatePendingFurnitureItem, cancelPendingDoor, cancelPendingFurnitureItem]);
 
-  const handlePointerMove = () => {
-    // Atualização de cursor tratada via CanvasArea
+  // CÁLCULO DE BOUNDING BOX E VALIDAÇÃO DE COLISÃO PARA MÓVEIS
+  const getEffectiveFurnitureBounds = (
+    centerX: number,
+    centerY: number,
+    width: number,
+    depth: number,
+    rotation: number
+  ) => {
+    const isRotated = rotation === 90 || rotation === 270;
+    const eW = isRotated ? depth : width;
+    const eD = isRotated ? width : depth;
+
+    return {
+      minX: centerX - eW / 2,
+      maxX: centerX + eW / 2,
+      minY: centerY - eD / 2,
+      maxY: centerY + eD / 2,
+      width: eW,
+      depth: eD,
+    };
+  };
+
+  const isFurniturePositionValid = (
+    centerX: number,
+    centerY: number,
+    width: number,
+    depth: number,
+    rotation: number,
+    ignoreItemId?: string
+  ): boolean => {
+    const bounds = getEffectiveFurnitureBounds(centerX, centerY, width, depth, rotation);
+
+    // 1. Limites do Terreno
+    if (bounds.minX < 0 || bounds.maxX > terrain.width || bounds.minY < 0 || bounds.maxY > terrain.length) {
+      return false;
+    }
+
+    // 2. Colisão com Paredes
+    for (const wall of walls) {
+      if (lineSegmentIntersectsRect(wall.x1, wall.y1, wall.x2, wall.y2, bounds.minX, bounds.minY, bounds.maxX, bounds.maxY)) {
+        return false;
+      }
+    }
+
+    // 3. Colisão com outros Móveis
+    for (const item of items) {
+      if (ignoreItemId && item.id === ignoreItemId) continue;
+
+      const otherBounds = getEffectiveFurnitureBounds(item.x, item.y, item.width, item.depth, item.rotation);
+
+      if (
+        bounds.minX < otherBounds.maxX &&
+        bounds.maxX > otherBounds.minX &&
+        bounds.minY < otherBounds.maxY &&
+        bounds.maxY > otherBounds.minY
+      ) {
+        return false;
+      }
+    }
+
+    return true;
   };
 
   const getHoveredTarget = (): HoveredTarget | null => {
-    if (activeMode !== 'build') return null;
     if (cursorPos.x === null || cursorPos.y === null || !cursorPos.isInsideTerrain) {
       return null;
     }
@@ -93,6 +172,15 @@ export function useBuildInteractions() {
     const mx = cursorPos.x;
     const my = cursorPos.y;
 
+    // Detecta Móveis no Modo Compra ou Borracha
+    for (const item of items) {
+      const bounds = getEffectiveFurnitureBounds(item.x, item.y, item.width, item.depth, item.rotation);
+      if (mx >= bounds.minX && mx <= bounds.maxX && my >= bounds.minY && my <= bounds.maxY) {
+        return { type: 'furniture', id: item.id, furniture: item };
+      }
+    }
+
+    // Detecta Esquadrias
     for (const dw of doorsWindows) {
       const wall = walls.find((w) => w.id === dw.wallId);
       if (wall) {
@@ -104,6 +192,7 @@ export function useBuildInteractions() {
       }
     }
 
+    // Detecta Paredes
     let closestWall: Wall | null = null;
     let minDistance = 0.4;
 
@@ -119,6 +208,7 @@ export function useBuildInteractions() {
       return { type: 'wall', id: closestWall.id, wall: closestWall };
     }
 
+    // Detecta Pisos
     if (cursorPos.gridX !== null && cursorPos.gridY !== null) {
       const key = `${cursorPos.gridX},${cursorPos.gridY}`;
       if (floors[key]) {
@@ -130,7 +220,6 @@ export function useBuildInteractions() {
   };
 
   const getHoveredWallTarget = (): HoveredWallTarget | null => {
-    if (activeMode !== 'build') return null;
     if (cursorPos.x === null || cursorPos.y === null || !cursorPos.isInsideTerrain) {
       return null;
     }
@@ -160,9 +249,79 @@ export function useBuildInteractions() {
     return null;
   };
 
-  // HANDLER DE CLIQUE - APENAS EXECUTADO NO MODO 'build'
+  // HANDLER DE CLIQUE
   const handlePointerDown = (e: React.PointerEvent) => {
     if (e.button !== 0) return;
+
+    // INTERAÇÃO NO MODO COMPRA (`activeMode === 'buy'`)
+    if (activeMode === 'buy') {
+      if (pendingFurnitureItem) {
+        if (cursorPos.x !== null && cursorPos.y !== null) {
+          const snapStep = 0.1; // Snap leve de 0.1m
+          const candX = Number((Math.round(cursorPos.x / snapStep) * snapStep).toFixed(2));
+          const candY = Number((Math.round(cursorPos.y / snapStep) * snapStep).toFixed(2));
+
+          const isValid = isFurniturePositionValid(
+            candX,
+            candY,
+            pendingFurnitureItem.catalogItem.width,
+            pendingFurnitureItem.catalogItem.depth,
+            pendingFurnitureItem.rotation,
+            pendingFurnitureItem.movingItemId
+          );
+
+          if (isValid) {
+            if (pendingFurnitureItem.movingItemId) {
+              updateItemPosition(
+                pendingFurnitureItem.movingItemId,
+                candX,
+                candY,
+                pendingFurnitureItem.rotation
+              );
+              cancelPendingFurnitureItem();
+            } else {
+              addItem({
+                catalogId: pendingFurnitureItem.catalogItem.catalogId,
+                name: pendingFurnitureItem.catalogItem.name,
+                category: pendingFurnitureItem.catalogItem.category,
+                width: pendingFurnitureItem.catalogItem.width,
+                depth: pendingFurnitureItem.catalogItem.depth,
+                height: pendingFurnitureItem.catalogItem.height,
+                x: candX,
+                y: candY,
+                rotation: pendingFurnitureItem.rotation,
+                color: pendingFurnitureItem.catalogItem.color,
+                textureUrl: pendingFurnitureItem.catalogItem.textureUrl,
+                primitiveShape: pendingFurnitureItem.catalogItem.primitiveShape,
+              });
+            }
+          }
+        }
+      } else {
+        // Clicar em um móvel existente para SELECIONAR E MOVER!
+        const target = getHoveredTarget();
+        if (target && target.type === 'furniture' && target.furniture) {
+          const furn = target.furniture;
+          setPendingFurnitureItem({
+            catalogItem: {
+              catalogId: furn.catalogId,
+              name: furn.name,
+              category: furn.category,
+              width: furn.width,
+              depth: furn.depth,
+              height: furn.height,
+              color: furn.color,
+              textureUrl: furn.textureUrl,
+              primitiveShape: furn.primitiveShape,
+            },
+            rotation: furn.rotation,
+            movingItemId: furn.id,
+          });
+        }
+      }
+      return;
+    }
+
     if (activeMode !== 'build') return;
 
     // 1. FERRAMENTA DE CONSTRUÇÃO DE PAREDES
@@ -173,7 +332,7 @@ export function useBuildInteractions() {
       }
     }
 
-    // 2. FERRAMENTA DE PINTURA DE PAREDES (SOMBREAMENTO ALINHADO DIRETO COM O CURSOR DO MOUSE)
+    // 2. FERRAMENTA DE PINTURA DE PAREDES
     else if (activeBuildTool === 'wall_paint') {
       const hoveredWallTarget = getHoveredWallTarget();
       if (hoveredWallTarget && cursorPos.x !== null && cursorPos.y !== null) {
@@ -317,7 +476,9 @@ export function useBuildInteractions() {
     else if (activeBuildTool === 'eraser') {
       const target = getHoveredTarget();
       if (target) {
-        if (target.type === 'door_window' && target.id) {
+        if (target.type === 'furniture' && target.id) {
+          removeItem(target.id);
+        } else if (target.type === 'door_window' && target.id) {
           removeDoorWindow(target.id);
         } else if (target.type === 'wall' && target.id) {
           removeWall(target.id);
@@ -379,8 +540,25 @@ export function useBuildInteractions() {
     setEraseStartCell(null);
   };
 
+  // CANDIDATO A POSICIONAMENTO DE MÓVEL
+  const candSnapStep = 0.1;
+  const candX = cursorPos.x !== null ? Number((Math.round(cursorPos.x / candSnapStep) * candSnapStep).toFixed(2)) : null;
+  const candY = cursorPos.y !== null ? Number((Math.round(cursorPos.y / candSnapStep) * candSnapStep).toFixed(2)) : null;
+
+  const isPendingFurnitureValid =
+    pendingFurnitureItem && candX !== null && candY !== null
+      ? isFurniturePositionValid(
+          candX,
+          candY,
+          pendingFurnitureItem.catalogItem.width,
+          pendingFurnitureItem.catalogItem.depth,
+          pendingFurnitureItem.rotation,
+          pendingFurnitureItem.movingItemId
+        )
+      : false;
+
   return {
-    handlePointerMove,
+    handlePointerMove: () => {},
     handlePointerDown,
     handlePointerUp,
     isSpacePressed,
@@ -402,8 +580,23 @@ export function useBuildInteractions() {
             y2: cursorPos.gridY,
           }
         : null,
-    hoveredTarget: activeMode === 'build' ? getHoveredTarget() : null,
+    hoveredTarget: getHoveredTarget(),
     hoveredWallTarget: activeMode === 'build' ? getHoveredWallTarget() : null,
+    pendingFurniturePreview:
+      pendingFurnitureItem && candX !== null && candY !== null
+        ? {
+            x: candX,
+            y: candY,
+            width: pendingFurnitureItem.catalogItem.width,
+            depth: pendingFurnitureItem.catalogItem.depth,
+            height: pendingFurnitureItem.catalogItem.height,
+            rotation: pendingFurnitureItem.rotation,
+            color: pendingFurnitureItem.catalogItem.color,
+            textureUrl: pendingFurnitureItem.catalogItem.textureUrl,
+            primitiveShape: pendingFurnitureItem.catalogItem.primitiveShape,
+            isValid: isPendingFurnitureValid,
+          }
+        : null,
   };
 }
 
@@ -438,4 +631,54 @@ function projectPointOntoSegment(px: number, py: number, x1: number, y1: number,
     x: projX,
     y: projY,
   };
+}
+
+// AUXILIAR DE INTERSEÇÃO ENTRE SEGMENTO DE LINHA E RETÂNGULO
+function lineSegmentIntersectsRect(
+  x1: number,
+  y1: number,
+  x2: number,
+  y2: number,
+  minX: number,
+  minY: number,
+  maxX: number,
+  maxY: number
+): boolean {
+  if ((x1 < minX && x2 < minX) || (x1 > maxX && x2 > maxX) || (y1 < minY && y2 < minY) || (y1 > maxY && y2 > maxY)) {
+    return false;
+  }
+
+  if (pointInRect(x1, y1, minX, minY, maxX, maxY) || pointInRect(x2, y2, minX, minY, maxX, maxY)) {
+    return true;
+  }
+
+  return (
+    segmentsIntersect(x1, y1, x2, y2, minX, minY, maxX, minY) ||
+    segmentsIntersect(x1, y1, x2, y2, maxX, minY, maxX, maxY) ||
+    segmentsIntersect(x1, y1, x2, y2, maxX, maxY, minX, maxY) ||
+    segmentsIntersect(x1, y1, x2, y2, minX, maxY, minX, minY)
+  );
+}
+
+function pointInRect(x: number, y: number, minX: number, minY: number, maxX: number, maxY: number): boolean {
+  return x >= minX && x <= maxX && y >= minY && y <= maxY;
+}
+
+function segmentsIntersect(
+  x1: number,
+  y1: number,
+  x2: number,
+  y2: number,
+  x3: number,
+  y3: number,
+  x4: number,
+  y4: number
+): boolean {
+  const ccw = (ax: number, ay: number, bx: number, by: number, cx: number, cy: number) => {
+    return (cy - ay) * (bx - ax) > (by - ay) * (cx - ax);
+  };
+  return (
+    ccw(x1, y1, x3, y3, x4, y4) !== ccw(x2, y2, x3, y3, x4, y4) &&
+    ccw(x1, y1, x2, y2, x3, y3) !== ccw(x1, y1, x2, y2, x4, y4)
+  );
 }

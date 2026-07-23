@@ -4,7 +4,7 @@ import { useCanvasRenderer } from '../../hooks/useCanvasRenderer';
 import { useBuildInteractions } from '../../hooks/useBuildInteractions';
 import { Viewport3D } from './Viewport3D';
 import { WallViewControls } from './WallViewControls';
-import { Move, Compass, Sliders } from 'lucide-react';
+import { Move, Compass, Sliders, Sofa } from 'lucide-react';
 
 export function CanvasArea() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -34,6 +34,7 @@ export function CanvasArea() {
     draftFloorRect,
     hoveredTarget,
     hoveredWallTarget,
+    pendingFurniturePreview,
   } = useBuildInteractions();
 
   useCanvasRenderer(canvasRef, {
@@ -41,6 +42,7 @@ export function CanvasArea() {
     draftFloorRect,
     hoveredTarget,
     hoveredWallTarget,
+    pendingFurniturePreview,
   });
 
   const isPanningRef = useRef(false);
@@ -122,7 +124,7 @@ export function CanvasArea() {
       return;
     }
 
-    if (e.button === 0 && activeMode === 'build') {
+    if (e.button === 0 && (activeMode === 'build' || activeMode === 'buy')) {
       handlePointerDown(e);
     }
   };
@@ -175,12 +177,22 @@ export function CanvasArea() {
         className="w-full h-full block touch-none"
       />
 
+      {/* HUD BADGE INDICATIVO DA FERRAMENTA OU MODO ATIVO */}
       <div className="absolute top-4 left-6 z-20 flex items-center gap-3 pointer-events-none">
         <div className="px-3 py-1.5 rounded-2xl bg-slate-900/85 backdrop-blur-md border border-slate-800/90 text-xs text-slate-300 shadow-xl flex items-center gap-2">
           {activeMode === 'settings' ? (
             <>
               <Sliders className="w-3.5 h-3.5 text-cyan-400" />
               <span className="font-semibold text-white">Configurações do Lote • Clique e Arraste para Mover (Pan)</span>
+            </>
+          ) : activeMode === 'buy' ? (
+            <>
+              <Sofa className="w-3.5 h-3.5 text-purple-400" />
+              <span className="font-semibold text-white">
+                {pendingFurniturePreview
+                  ? 'Modo Compra: Clique para Posicionar o Móvel (Tecla R: Rotacionar 90°)'
+                  : 'Modo Compra: Selecione um móvel ou clique em um existente para Mover'}
+              </span>
             </>
           ) : (
             <>
@@ -221,6 +233,9 @@ export function CanvasArea() {
         </span>
         <span className="flex items-center gap-1">
           <span>Q/E: Rotação</span>
+        </span>
+        <span className="flex items-center gap-1">
+          <span>R: Girar Móvel (90°)</span>
         </span>
       </div>
 

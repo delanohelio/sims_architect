@@ -3,11 +3,14 @@ import { Palette, Upload, Link as LinkIcon, Trash2, Check, Image as ImageIcon, P
 import { useSimsStore } from '../../store/useSimsStore';
 
 interface ColorTexturePickerProps {
-  label: string;
+  label?: string;
   currentColor?: string;
   currentTextureUrl?: string;
+  selectedColor?: string;
+  selectedTextureUrl?: string;
   onSelectColor: (color: string) => void;
   onSelectTextureUrl?: (url: string | undefined) => void;
+  onSelectTexture?: (url: string | undefined) => void;
   presetColors?: string[];
 }
 
@@ -19,33 +22,40 @@ const DEFAULT_PRESET_COLORS = [
 ];
 
 export function ColorTexturePicker({
-  label,
-  currentColor = '#E2E8F0',
+  label = 'Aparência',
+  currentColor,
   currentTextureUrl,
+  selectedColor,
+  selectedTextureUrl,
   onSelectColor,
   onSelectTextureUrl,
+  onSelectTexture,
   presetColors = DEFAULT_PRESET_COLORS,
 }: ColorTexturePickerProps) {
+  const activeColor = selectedColor || currentColor || '#E2E8F0';
+  const activeTextureUrl = selectedTextureUrl || currentTextureUrl;
+  const handleSelectTex = onSelectTexture || onSelectTextureUrl;
+
   const { customTextures, addCustomTexture, removeCustomTexture } = useSimsStore();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  const [appearanceType, setAppearanceType] = useState<'color' | 'texture'>(currentTextureUrl ? 'texture' : 'color');
+  const [appearanceType, setAppearanceType] = useState<'color' | 'texture'>(activeTextureUrl ? 'texture' : 'color');
   const [showUrlInput, setShowUrlInput] = useState(false);
   const [urlInputValue, setUrlInputValue] = useState('');
 
   // Seleção de Cor Sólida: Limpa a textura ativa e define a cor
   const handleChooseColor = (color: string) => {
     onSelectColor(color);
-    if (onSelectTextureUrl) {
-      onSelectTextureUrl(undefined);
+    if (handleSelectTex) {
+      handleSelectTex(undefined);
     }
     setAppearanceType('color');
   };
 
   // Seleção de Textura: Define a URL da textura ativa
   const handleChooseTexture = (url: string) => {
-    if (onSelectTextureUrl) {
-      onSelectTextureUrl(url);
+    if (handleSelectTex) {
+      handleSelectTex(url);
     }
     setAppearanceType('texture');
   };
@@ -58,8 +68,8 @@ export function ColorTexturePicker({
       reader.onload = (event) => {
         const dataUrl = event.target?.result as string;
         if (dataUrl) {
-          const newTex = addCustomTexture(file.name.substring(0, 16), dataUrl);
-          handleChooseTexture(newTex.url);
+          addCustomTexture(file.name.substring(0, 16), dataUrl);
+          handleChooseTexture(dataUrl);
         }
       };
       reader.readAsDataURL(file);
@@ -70,8 +80,8 @@ export function ColorTexturePicker({
   const handleAddUrlTexture = () => {
     if (urlInputValue.trim()) {
       const url = urlInputValue.trim();
-      const newTex = addCustomTexture('Textura Web', url);
-      handleChooseTexture(newTex.url);
+      addCustomTexture('Textura Web', url);
+      handleChooseTexture(url);
       setUrlInputValue('');
       setShowUrlInput(false);
     }
@@ -90,11 +100,11 @@ export function ColorTexturePicker({
         <div className="flex items-center gap-1 bg-slate-900 p-0.5 rounded-lg border border-slate-800">
           <button
             onClick={() => {
-              if (onSelectTextureUrl) onSelectTextureUrl(undefined);
+              if (handleSelectTex) handleSelectTex(undefined);
               setAppearanceType('color');
             }}
             className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all ${
-              appearanceType === 'color' && !currentTextureUrl
+              appearanceType === 'color' && !activeTextureUrl
                 ? 'bg-amber-500 text-slate-950 shadow'
                 : 'text-slate-400 hover:text-slate-200'
             }`}
@@ -104,7 +114,7 @@ export function ColorTexturePicker({
           <button
             onClick={() => setAppearanceType('texture')}
             className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all ${
-              appearanceType === 'texture' || currentTextureUrl
+              appearanceType === 'texture' || activeTextureUrl
                 ? 'bg-cyan-500 text-slate-950 shadow'
                 : 'text-slate-400 hover:text-slate-200'
             }`}
@@ -115,17 +125,17 @@ export function ColorTexturePicker({
       </div>
 
       {/* ABA 1: CORES SÓLIDAS */}
-      {(appearanceType === 'color' && !currentTextureUrl) && (
+      {(appearanceType === 'color' && !activeTextureUrl) && (
         <div className="space-y-3 animate-in fade-in duration-150">
           {/* Seletor Hex Customizado */}
           <label className="flex items-center gap-2.5 p-2 bg-slate-900 border border-slate-700/80 rounded-xl cursor-pointer hover:border-slate-500 transition-all">
             <input
               type="color"
-              value={currentColor}
+              value={activeColor}
               onChange={(e) => handleChooseColor(e.target.value)}
               className="w-6 h-6 rounded-lg border-0 bg-transparent cursor-pointer p-0"
             />
-            <span className="font-mono text-slate-200 uppercase text-xs">{currentColor}</span>
+            <span className="font-mono text-slate-200 uppercase text-xs">{activeColor}</span>
           </label>
 
           {/* Paleta de Cores Rápidas */}
@@ -133,7 +143,7 @@ export function ColorTexturePicker({
             <span className="text-[10px] text-slate-400 font-semibold">Paleta de Cores:</span>
             <div className="grid grid-cols-8 gap-1.5">
               {presetColors.map((color) => {
-                const isSelected = currentColor.toLowerCase() === color.toLowerCase() && !currentTextureUrl;
+                const isSelected = activeColor.toLowerCase() === color.toLowerCase() && !activeTextureUrl;
                 return (
                   <button
                     key={color}
@@ -153,7 +163,7 @@ export function ColorTexturePicker({
       )}
 
       {/* ABA 2: GALERIA DE TEXTURAS DE IMAGEM */}
-      {(appearanceType === 'texture' || currentTextureUrl) && (
+      {(appearanceType === 'texture' || activeTextureUrl) && (
         <div className="space-y-3 animate-in fade-in duration-150">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-bold text-white flex items-center gap-1.5">
@@ -213,7 +223,7 @@ export function ColorTexturePicker({
           {customTextures.length > 0 ? (
             <div className="grid grid-cols-4 gap-2 pt-1">
               {customTextures.map((tex) => {
-                const isSelected = currentTextureUrl === tex.url;
+                const isSelected = activeTextureUrl === tex.url;
                 return (
                   <div
                     key={tex.id}
