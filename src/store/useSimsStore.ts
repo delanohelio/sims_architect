@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 import type {
   AppMode,
   ViewMode3D,
@@ -147,6 +148,12 @@ interface SimsState {
   customFurnitureCategory: FurnitureCategory;
   customFurnitureShape: 'box' | 'cylinder';
 
+  projectName: string;
+  projectDescription: string;
+  setProjectName: (name: string) => void;
+  setProjectDescription: (description: string) => void;
+  setProjectDetails: (name: string, description?: string) => void;
+
   walls: Wall[];
   floors: Record<string, FloorTile>;
   doorsWindows: DoorWindow[];
@@ -243,6 +250,8 @@ interface SimsState {
   updateItemPosition: (id: string, x: number, y: number, rotation: number) => void;
   removeItem: (id: string) => void;
 
+  loadProjectState: (data: any) => void;
+  resetProject: () => void;
   exportJSON: () => string;
   importJSON: (jsonString: string) => boolean;
 }
@@ -268,10 +277,19 @@ const DEFAULT_GRIDSETTINGS: GridSettings = {
   snapToGrid: true,
 };
 
-export const useSimsStore = create<SimsState>((set, get) => ({
-  activeMode: 'settings',
-  viewMode: '2d',
-  terrain: DEFAULT_TERRAIN,
+export const useSimsStore = create<SimsState>()(
+  persist(
+    (set, get) => ({
+      projectName: 'Meu Projeto Sims',
+      projectDescription: '',
+      setProjectName: (name) => set({ projectName: name }),
+      projectDescriptionSet: (desc: string) => set({ projectDescription: desc }),
+      setProjectDescription: (desc) => set({ projectDescription: desc }),
+      setProjectDetails: (name, description = '') => set({ projectName: name, projectDescription: description }),
+
+      activeMode: 'settings',
+      viewMode: '2d',
+      terrain: DEFAULT_TERRAIN,
   viewState: DEFAULT_VIEWSTATE,
   gridSettings: DEFAULT_GRIDSETTINGS,
   cursorPos: {
@@ -728,24 +746,81 @@ export const useSimsStore = create<SimsState>((set, get) => ({
       items: state.items.filter((it) => it.id !== id),
     })),
 
+  loadProjectState: (data) => {
+    get().cancelPendingDoor();
+    get().cancelPendingFurnitureItem();
+    if (!data || typeof data !== 'object') return;
+    set((state) => ({
+      projectName: typeof data.projectName === 'string' ? data.projectName : state.projectName,
+      projectDescription: typeof data.projectDescription === 'string' ? data.projectDescription : state.projectDescription,
+      terrain: data.terrain || state.terrain,
+      walls: Array.isArray(data.walls) ? data.walls : [],
+      floors: data.floors && typeof data.floors === 'object' ? data.floors : {},
+      doorsWindows: Array.isArray(data.doorsWindows) ? data.doorsWindows : [],
+      items: Array.isArray(data.items) ? data.items : [],
+      customTextures: Array.isArray(data.customTextures) ? data.customTextures : state.customTextures,
+      savedCustomFurniture: Array.isArray(data.savedCustomFurniture) ? data.savedCustomFurniture : state.savedCustomFurniture,
+    }));
+    get().centerView();
+  },
+
+  resetProject: () => {
+    get().cancelPendingDoor();
+    get().cancelPendingFurnitureItem();
+    try {
+      localStorage.removeItem('sims-architect-storage');
+      localStorage.removeItem('sims_saved_furniture');
+      localStorage.removeItem('sims_custom_textures');
+    } catch {}
+    set({
+      projectName: 'Meu Projeto Sims',
+      projectDescription: '',
+      terrain: DEFAULT_TERRAIN,
+      walls: [],
+      floors: {},
+      doorsWindows: [],
+      items: [],
+      customTextures: [
+        { id: 'tex_wood_warm', name: 'Madeira Nobre', url: '/textures/wood.svg' },
+        { id: 'tex_brick_red', name: 'Tijolo Aparente', url: '/textures/brick_red.svg' },
+        { id: 'tex_marble_white', name: 'Mármore Carrara', url: '/textures/marble.svg' },
+        { id: 'tex_tile_blue', name: 'Azulejo Hidráulico', url: '/textures/tile_blue.svg' },
+      ],
+      savedCustomFurniture: [],
+      viewState: DEFAULT_VIEWSTATE,
+      viewMode: '2d',
+      activeMode: 'settings',
+      activeBuildTool: 'wall',
+    });
+  },
+
   exportJSON: () => {
-    const { terrain, walls, floors, doorsWindows, items, customTextures } = get();
-    return JSON.stringify({ terrain, walls, floors, doorsWindows, items, customTextures }, null, 2);
+    const { projectName, projectDescription, terrain, walls, floors, doorsWindows, items, customTextures, savedCustomFurniture } = get();
+    return JSON.stringify(
+      {
+        appName: 'Sims Architect',
+        version: '2.0',
+        exportedAt: new Date().toISOString(),
+        projectName,
+        projectDescription,
+        terrain,
+        walls,
+        floors,
+        doorsWindows,
+        items,
+        customTextures,
+        savedCustomFurniture,
+      },
+      null,
+      2
+    );
   },
 
   importJSON: (jsonString) => {
     try {
       const data = JSON.parse(jsonString);
-      if (data.terrain && Array.isArray(data.walls) && data.floors) {
-        set({
-          terrain: data.terrain,
-          walls: data.walls,
-          floors: data.floors,
-          doorsWindows: data.doorsWindows || [],
-          items: data.items || [],
-          customTextures: data.customTextures || [],
-        });
-        get().centerView();
+      if (data && (data.terrain || Array.isArray(data.walls))) {
+        get().loadProjectState(data);
         return true;
       }
       return false;
@@ -753,4 +828,20 @@ export const useSimsStore = create<SimsState>((set, get) => ({
       return false;
     }
   },
-}));
+    }),
+    {
+      name: 'sims-architect-storage',
+      partialize: (state) => ({
+        projectName: state.projectName,
+        projectDescription: state.projectDescription,
+        terrain: state.terrain,
+        walls: state.walls,
+        floors: state.floors,
+        doorsWindows: state.doorsWindows,
+        items: state.items,
+        customTextures: state.customTextures,
+        savedCustomFurniture: state.savedCustomFurniture,
+      }),
+    }
+  )
+);

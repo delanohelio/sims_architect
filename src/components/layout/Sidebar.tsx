@@ -1,6 +1,7 @@
 import { useSimsStore } from '../../store/useSimsStore';
 import { BuildSidebar } from './BuildSidebar';
 import { BuySidebar } from './BuySidebar';
+import { ExportSidebar } from './ExportSidebar';
 import { Inspection3DSidebar } from './Inspection3DSidebar';
 import { SettingsSidebar } from './SettingsSidebar';
 
@@ -22,10 +23,11 @@ export function Sidebar() {
     return <BuySidebar />;
   }
 
-  // Se estiver no Modo 2D e no modo de Configurações (ou padrão), exibe o painel de configurações do terreno
-  if (activeMode === 'settings') {
-    return <SettingsSidebar />;
+  // Se estiver no Modo Exportar, exibe a Sidebar do Modo Exportar
+  if (activeMode === 'export') {
+    return <ExportSidebar />;
   }
 
+  // Se estiver no Modo de Configurações (ou padrão), exibe o painel de configurações do terreno
   return <SettingsSidebar />;
 }

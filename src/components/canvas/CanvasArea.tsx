@@ -168,6 +168,7 @@ export function CanvasArea() {
       }`}
     >
       <canvas
+        id="sims-canvas-2d"
         ref={canvasRef}
         onPointerMove={handlePointerMove}
         onPointerDown={handlePointerDownWrapper}
@@ -193,6 +194,11 @@ export function CanvasArea() {
                   ? 'Modo Compra: Clique para Posicionar o Móvel (Tecla R: Rotacionar +45°)'
                   : 'Modo Compra: Selecione um móvel ou clique em um existente para Mover'}
               </span>
+            </>
+          ) : activeMode === 'export' ? (
+            <>
+              <Sliders className="w-3.5 h-3.5 text-emerald-400" />
+              <span className="font-semibold text-white">Modo Exportar & Salvar • Escolha uma opção de exportação no painel lateral</span>
             </>
           ) : (
             <>

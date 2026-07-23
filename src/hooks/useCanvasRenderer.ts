@@ -122,6 +122,10 @@ export function useCanvasRenderer(
     let img = imageCacheRef.current.get(url);
     if (!img) {
       img = new Image();
+      // Define crossOrigin para evitar contaminação (tainting) do canvas 2D
+      if (!url.startsWith('data:')) {
+        img.crossOrigin = 'anonymous';
+      }
       img.onerror = () => {
         failedImagesRef.current.add(url);
         imageCacheRef.current.delete(url);
@@ -343,6 +347,38 @@ export function useCanvasRenderer(
         ctx.stroke();
 
         ctx.restore();
+
+        // Cota de Dimensão Métricas da Parede em Tempo Real
+        const wallLenMeters = Math.hypot(wall.x2 - wall.x1, wall.y2 - wall.y1);
+        if (wallLenMeters > 0.3) {
+          const midX = (x1 + x2) / 2;
+          const midY = (y1 + y2) / 2;
+          const textStr = `${wallLenMeters.toFixed(2)}m`;
+
+          ctx.save();
+          ctx.font = `bold ${Math.max(9, 10 / viewState.zoom)}px Inter, sans-serif`;
+          const textWidth = ctx.measureText(textStr).width;
+
+          ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+          ctx.strokeStyle = '#38BDF8';
+          ctx.lineWidth = 1 / viewState.zoom;
+          ctx.beginPath();
+          ctx.roundRect(
+            midX - textWidth / 2 - 4 / viewState.zoom,
+            midY - 8 / viewState.zoom,
+            textWidth + 8 / viewState.zoom,
+            16 / viewState.zoom,
+            4 / viewState.zoom
+          );
+          ctx.fill();
+          ctx.stroke();
+
+          ctx.fillStyle = '#FFFFFF';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(textStr, midX, midY);
+          ctx.restore();
+        }
       });
 
       // Renderiza Portas e Janelas sobre as Paredes

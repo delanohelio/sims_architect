@@ -72,12 +72,19 @@ O **Sims Architect** é uma aplicação web interativa de arquitetura e design d
   - Configuração de **Nome Customizado**, Categoria Específica, Sliders de **Largura ($W$)**, **Profundidade ($D$)** e **Altura ($H$)** ($0.3\text{m} \dots 5.0\text{m}$), **Formato 3D (Caixa / Cilindro)** e **Aparência (Cor ou Textura)**.
   - **Salvar no Catálogo**: Permite registrar o móvel customizado no catálogo local (com persistência no `localStorage`).
   - **Exibição Multicategoria com Badge Especial**: O móvel customizado salvo aparece tanto na aba **"Customizado"** quanto na aba da sua **categoria escolhida (ex: Sala, Quarto)**, com borda roxa brilhante e badge `★ Custom` em destaque.
-- **Seleção de Cor Sólida e Limpeza de Texturas (Pisos, Paredes e Terreno)**:
-  - Corrigido o fluxo de seleção: ao escolher uma **Cor Sólida** nas ferramentas de pisos, paredes ou terreno, o sistema remove a textura de imagem ativa prévia (`textureUrl = undefined`), garantindo que a cor sólida escolhida seja aplicada imediatamente tanto no 2D quanto no 3D.
-- **Terreno com Grid Xadrez de 2 Cores (Customizável)**:
-  - Adicionado suporte a **Cor Primária** (`customColor`) e **Cor Secundária** (`customSecondaryColor`) nas configurações do terreno.
-  - Renderiza um padrão xadrez/grid métrico de duas cores no Canvas 2D e gera automaticamente uma textura `CanvasTexture` correspondente no Three.js 3D.
-  - Inclui presets rápidos: **🟩 Grama 2 Cores**, **🟦 Dark / Ciano**, **⬜ Concreto / Slate** e **🟫 Madeira / Areia**.
+- **FASE 4: MODO EXPORTAR, PERSISTÊNCIA AUTOMÁTICA & COTAS MÉTRICAS**:
+  - **Auto-Save no Navegador (`Zustand Persist Middleware`)**:
+    - O progresso do usuário (estruturas e metadados do projeto) é salvo automaticamente no `localStorage` sob a chave `sims-architect-storage`.
+    - Salva `projectName`, `projectDescription`, `terrain`, `walls`, `floors`, `doorsWindows`, `items`, `customTextures` e `savedCustomFurniture`.
+  - **Identificação do Projeto (Nome & Descrição Opcional)**:
+    - Campos de texto na barra lateral do Modo Exportar ([ExportSidebar.tsx](file:///Users/delano/dev/sims-architect/src/components/layout/ExportSidebar.tsx)) para definir o **Nome do Projeto** (ex: "Mansão Villa Sims") e a **Descrição Opcional**.
+    - Integrados no cabeçalho dos arquivos `.json`, imagens `.png` e pranchas `.pdf`.
+  - **Cotas Métricas em Tempo Real e Exportação (Paredes, Esquadrias e Objetos)**:
+    - **Paredes**: Renderizam etiquetas com comprimento real em metros (ex: `4.50m`).
+    - **Esquadrias**: Renderizam cotas de largura e altura (ex: `0.90m × 2.10m`).
+    - **Móveis/Objetos**: Renderizam o nome e as dimensões de ocupação ($W \times D$, ex: `2.0m × 1.0m`).
+  - **Prancha A4 em PDF (`jsPDF`)**:
+    - Documento paisagem A4 com cabeçalho dark, nome do projeto em destaque, descrição formatada, estatísticas métricas e desenho com cotas centralizado sem distorções.
 - **Navegação Orbital 3D Completa por Teclado**:
   - **WASD / Setas**: Pan/Strafe horizontal no terreno 3D.
   - **Q / E**: Rotação orbital horizontal da câmera (esquerda / direita).
