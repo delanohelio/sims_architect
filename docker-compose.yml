@@ -1,0 +1,15 @@
+services:
+  sims-architect:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: sims-architect
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
