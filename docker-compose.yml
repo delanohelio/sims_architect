@@ -6,6 +6,8 @@ services:
     container_name: sims-architect
     ports:
       - "8080:8080"
+    volumes:
+      - ./public/uploads:/usr/share/nginx/html/uploads
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:8080/"]

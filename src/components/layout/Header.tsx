@@ -75,7 +75,7 @@ export function Header() {
               Sims Architect <span className="text-emerald-400 text-xs font-normal">2D / 3D</span>
             </h1>
             <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-              Fase 2 Pro
+              Fase 3 Pro
             </span>
           </div>
           <p className="text-xs text-slate-400 mt-0.5">Planejador 2D & Maquete 3D Interativa</p>
@@ -100,9 +100,7 @@ export function Header() {
           label="Compra"
           icon={<ShoppingBag className="w-4 h-4" />}
           active={activeMode === 'buy'}
-          disabled
-          badge="Fase 3"
-          onClick={() => {}}
+          onClick={() => setMode('buy')}
         />
         <ModeButton
           label="Exportar"

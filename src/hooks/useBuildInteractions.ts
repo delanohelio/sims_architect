@@ -109,9 +109,12 @@ export function useBuildInteractions() {
     depth: number,
     rotation: number
   ) => {
-    const isRotated = rotation === 90 || rotation === 270;
-    const eW = isRotated ? depth : width;
-    const eD = isRotated ? width : depth;
+    const rad = (rotation * Math.PI) / 180;
+    const cos = Math.abs(Math.cos(rad));
+    const sin = Math.abs(Math.sin(rad));
+
+    const eW = width * cos + depth * sin;
+    const eD = width * sin + depth * cos;
 
     return {
       minX: centerX - eW / 2,
@@ -161,6 +164,17 @@ export function useBuildInteractions() {
       }
     }
 
+    return true;
+  };
+
+  const isWallPositionValid = (x1: number, y1: number, x2: number, y2: number): boolean => {
+    // Impede construir paredes que colidam com móveis de compra
+    for (const item of items) {
+      const bounds = getEffectiveFurnitureBounds(item.x, item.y, item.width, item.depth, item.rotation);
+      if (lineSegmentIntersectsRect(x1, y1, x2, y2, bounds.minX, bounds.minY, bounds.maxX, bounds.maxY)) {
+        return false;
+      }
+    }
     return true;
   };
 
@@ -504,16 +518,18 @@ export function useBuildInteractions() {
 
     if (isDrawingWall && wallStartVertex && cursorPos.snapVertexX !== null && cursorPos.snapVertexY !== null) {
       if (wallStartVertex.x !== cursorPos.snapVertexX || wallStartVertex.y !== cursorPos.snapVertexY) {
-        addWall({
-          x1: wallStartVertex.x,
-          y1: wallStartVertex.y,
-          x2: cursorPos.snapVertexX,
-          y2: cursorPos.snapVertexY,
-          colorSideA: selectedWallColor,
-          textureUrlSideA: selectedWallTexture,
-          colorSideB: selectedWallColor,
-          textureUrlSideB: selectedWallTexture,
-        });
+        if (isWallPositionValid(wallStartVertex.x, wallStartVertex.y, cursorPos.snapVertexX, cursorPos.snapVertexY)) {
+          addWall({
+            x1: wallStartVertex.x,
+            y1: wallStartVertex.y,
+            x2: cursorPos.snapVertexX,
+            y2: cursorPos.snapVertexY,
+            colorSideA: selectedWallColor,
+            textureUrlSideA: selectedWallTexture,
+            colorSideB: selectedWallColor,
+            textureUrlSideB: selectedWallTexture,
+          });
+        }
       }
     }
     setIsDrawingWall(false);
@@ -569,6 +585,7 @@ export function useBuildInteractions() {
             y1: wallStartVertex.y,
             x2: cursorPos.snapVertexX,
             y2: cursorPos.snapVertexY,
+            isValid: isWallPositionValid(wallStartVertex.x, wallStartVertex.y, cursorPos.snapVertexX, cursorPos.snapVertexY),
           }
         : null,
     draftFloorRect:

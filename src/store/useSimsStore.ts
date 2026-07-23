@@ -28,31 +28,48 @@ export const PRESET_LOTS = [
 
 export const CATALOG_FURNITURE: FurnitureCatalogItem[] = [
   // QUARTO
-  { catalogId: 'bed_double', name: 'Cama de Casal King', category: 'bedroom', width: 2.0, depth: 2.0, height: 0.5, color: '#3B82F6', primitiveShape: 'box' },
-  { catalogId: 'bed_single', name: 'Cama Solteiro', category: 'bedroom', width: 1.0, depth: 2.0, height: 0.5, color: '#60A5FA', primitiveShape: 'box' },
-  { catalogId: 'wardrobe', name: 'Guarda-Roupa 3 Portas', category: 'bedroom', width: 1.8, depth: 0.6, height: 2.1, color: '#475569', primitiveShape: 'box' },
-  { catalogId: 'nightstand', name: 'Criado-Mudo', category: 'bedroom', width: 0.5, depth: 0.4, height: 0.5, color: '#64748B', primitiveShape: 'box' },
+  { catalogId: 'bed_double', name: 'Cama de Casal King', category: 'bedroom', width: 2.0, depth: 2.0, height: 0.5, color: '#3B82F6', primitiveShape: 'box',
+    textureUrl: '/textures/fabric_blue.svg' },
+  { catalogId: 'bed_single', name: 'Cama Solteiro', category: 'bedroom', width: 1.0, depth: 2.0, height: 0.5, color: '#60A5FA', primitiveShape: 'box',
+    textureUrl: '/textures/fabric_blue.svg' },
+  { catalogId: 'wardrobe', name: 'Guarda-Roupa 3 Portas', category: 'bedroom', width: 1.8, depth: 0.6, height: 2.1, color: '#475569', primitiveShape: 'box',
+    textureUrl: '/textures/wood_dark.svg' },
+  { catalogId: 'nightstand', name: 'Criado-Mudo', category: 'bedroom', width: 0.5, depth: 0.4, height: 0.5, color: '#64748B', primitiveShape: 'box',
+    textureUrl: '/textures/wood.svg' },
 
   // SALA
-  { catalogId: 'sofa_3seater', name: 'Sofá 3 Lugares Premium', category: 'living', width: 2.5, depth: 1.0, height: 0.8, color: '#8B5CF6', primitiveShape: 'box' },
-  { catalogId: 'armchair', name: 'Poltrona de Leitura', category: 'living', width: 1.0, depth: 0.9, height: 0.8, color: '#A855F7', primitiveShape: 'box' },
-  { catalogId: 'coffee_table', name: 'Mesa de Centro', category: 'living', width: 1.2, depth: 0.6, height: 0.4, color: '#D97706', primitiveShape: 'box' },
-  { catalogId: 'tv_unit', name: 'Rack com TV 65"', category: 'living', width: 2.0, depth: 0.5, height: 1.2, color: '#1E293B', primitiveShape: 'box' },
+  { catalogId: 'sofa_3seater', name: 'Sofá 3 Lugares Premium', category: 'living', width: 2.5, depth: 1.0, height: 0.8, color: '#8B5CF6', primitiveShape: 'box',
+    textureUrl: '/textures/fabric_purple.svg' },
+  { catalogId: 'armchair', name: 'Poltrona de Leitura', category: 'living', width: 1.0, depth: 0.9, height: 0.8, color: '#A855F7', primitiveShape: 'box',
+    textureUrl: '/textures/fabric_purple.svg' },
+  { catalogId: 'coffee_table', name: 'Mesa de Centro', category: 'living', width: 1.2, depth: 0.6, height: 0.4, color: '#D97706', primitiveShape: 'box',
+    textureUrl: '/textures/wood.svg' },
+  { catalogId: 'tv_unit', name: 'Rack com TV 65"', category: 'living', width: 2.0, depth: 0.5, height: 1.2, color: '#1E293B', primitiveShape: 'box',
+    textureUrl: '/textures/wood_dark.svg' },
 
   // COZINHA
-  { catalogId: 'fridge_side', name: 'Geladeira Inox Double Door', category: 'kitchen', width: 0.8, depth: 0.8, height: 1.9, color: '#94A3B8', primitiveShape: 'box' },
-  { catalogId: 'dining_table', name: 'Mesa de Jantar 6 Lugares', category: 'kitchen', width: 2.0, depth: 1.0, height: 0.8, color: '#B45309', primitiveShape: 'box' },
-  { catalogId: 'chair', name: 'Cadeira de Jantar', category: 'kitchen', width: 0.5, depth: 0.5, height: 0.9, color: '#D97706', primitiveShape: 'box' },
-  { catalogId: 'kitchen_counter', name: 'Balcão de Cozinha com Pia', category: 'kitchen', width: 1.5, depth: 0.6, height: 0.9, color: '#0284C7', primitiveShape: 'box' },
+  { catalogId: 'fridge_side', name: 'Geladeira Inox Double Door', category: 'kitchen', width: 0.8, depth: 0.8, height: 1.9, color: '#94A3B8', primitiveShape: 'box',
+    textureUrl: '/textures/metal_inox.svg' },
+  { catalogId: 'dining_table', name: 'Mesa de Jantar 6 Lugares', category: 'kitchen', width: 2.0, depth: 1.0, height: 0.8, color: '#B45309', primitiveShape: 'box',
+    textureUrl: '/textures/wood.svg' },
+  { catalogId: 'chair', name: 'Cadeira de Jantar', category: 'kitchen', width: 0.5, depth: 0.5, height: 0.9, color: '#D97706', primitiveShape: 'box',
+    textureUrl: '/textures/wood.svg' },
+  { catalogId: 'kitchen_counter', name: 'Balcão de Cozinha com Pia', category: 'kitchen', width: 1.5, depth: 0.6, height: 0.9, color: '#0284C7', primitiveShape: 'box',
+    textureUrl: '/textures/marble.svg' },
 
   // BANHEIRO
-  { catalogId: 'toilet', name: 'Vaso Sanitário', category: 'bathroom', width: 0.5, depth: 0.7, height: 0.8, color: '#F8FAFC', primitiveShape: 'box' },
-  { catalogId: 'vanity_sink', name: 'Pia com Gabinete', category: 'bathroom', width: 0.8, depth: 0.5, height: 0.85, color: '#0EA5E9', primitiveShape: 'box' },
-  { catalogId: 'shower_box', name: 'Box com Chuveiro', category: 'bathroom', width: 1.0, depth: 1.0, height: 2.1, color: '#38BDF8', primitiveShape: 'box' },
+  { catalogId: 'toilet', name: 'Vaso Sanitário', category: 'bathroom', width: 0.5, depth: 0.7, height: 0.8, color: '#F8FAFC', primitiveShape: 'box',
+    textureUrl: '/textures/marble.svg' },
+  { catalogId: 'vanity_sink', name: 'Pia com Gabinete', category: 'bathroom', width: 0.8, depth: 0.5, height: 0.85, color: '#0EA5E9', primitiveShape: 'box',
+    textureUrl: '/textures/marble.svg' },
+  { catalogId: 'shower_box', name: 'Box com Chuveiro', category: 'bathroom', width: 1.0, depth: 1.0, height: 2.1, color: '#38BDF8', primitiveShape: 'box',
+    textureUrl: '/textures/tile_blue.svg' },
 
   // DECORAÇÃO / EXTERIOR
-  { catalogId: 'potted_plant', name: 'Planta de Vasado / Árvore', category: 'outdoor', width: 1.0, depth: 1.0, height: 1.5, color: '#15803D', primitiveShape: 'cylinder' },
-  { catalogId: 'floor_lamp', name: 'Luminária de Chão', category: 'outdoor', width: 0.4, depth: 0.4, height: 1.6, color: '#F59E0B', primitiveShape: 'cylinder' },
+  { catalogId: 'potted_plant', name: 'Planta de Vasado / Árvore', category: 'outdoor', width: 1.0, depth: 1.0, height: 1.5, color: '#15803D', primitiveShape: 'cylinder',
+    textureUrl: '/textures/foliage.svg' },
+  { catalogId: 'floor_lamp', name: 'Luminária de Chão', category: 'outdoor', width: 0.4, depth: 0.4, height: 1.6, color: '#F59E0B', primitiveShape: 'cylinder',
+    textureUrl: '/textures/metal_inox.svg' },
 ];
 
 export interface PendingFurniturePlacement {
@@ -141,6 +158,10 @@ interface SimsState {
   setActiveBuildTool: (tool: BuildTool) => void;
   setSetupModalOpen: (open: boolean) => void;
   
+  savedCustomFurniture: FurnitureCatalogItem[];
+  addCustomCatalogItem: (item: FurnitureCatalogItem) => void;
+  removeCustomCatalogItem: (catalogId: string) => void;
+
   addCustomTexture: (name: string, url: string) => void;
   removeCustomTexture: (id: string) => void;
 
@@ -175,8 +196,8 @@ interface SimsState {
 
   setTerrainSize: (width: number | any, length?: any) => void;
   setTerrainTheme: (theme: TerrainTheme) => void;
-  setTerrainCustomAppearance: (color?: string, textureUrl?: string) => void;
-  setCustomTerrain: (color?: string, textureUrl?: string) => void;
+  setTerrainCustomAppearance: (color?: string, secondaryColor?: string, textureUrl?: string) => void;
+  setCustomTerrain: (color?: string, secondaryColor?: string, textureUrl?: string) => void;
   
   setZoom: (newZoom: number, focalX?: number, focalY?: number) => void;
   pan: (deltaX: number, deltaY: number) => void;
@@ -267,10 +288,10 @@ export const useSimsStore = create<SimsState>((set, get) => ({
   isSetupModalOpen: false,
 
   customTextures: [
-    { id: 'tex_wood_warm', name: 'Madeira Nobre', url: 'https://images.unsplash.com/photo-1546484475-7f7bd55792da?auto=format&fit=crop&w=400&q=80' },
-    { id: 'tex_brick_red', name: 'Tijolo Aparente', url: 'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&w=400&q=80' },
-    { id: 'tex_marble_white', name: 'Mármore Carrara', url: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=400&q=80' },
-    { id: 'tex_tile_blue', name: 'Azulejo Hidráulico', url: 'https://images.unsplash.com/photo-1578683010236-d716f9a3f461?auto=format&fit=crop&w=400&q=80' },
+    { id: 'tex_wood_warm', name: 'Madeira Nobre', url: '/textures/wood.svg' },
+    { id: 'tex_brick_red', name: 'Tijolo Aparente', url: '/textures/brick_red.svg' },
+    { id: 'tex_marble_white', name: 'Mármore Carrara', url: '/textures/marble.svg' },
+    { id: 'tex_tile_blue', name: 'Azulejo Hidráulico', url: '/textures/tile_blue.svg' },
   ],
 
   selectedWallColor: '#E2E8F0',
@@ -329,13 +350,48 @@ export const useSimsStore = create<SimsState>((set, get) => ({
 
   setSetupModalOpen: (open) => set({ isSetupModalOpen: open }),
 
+  savedCustomFurniture: (() => {
+    try {
+      const data = localStorage.getItem('sims_saved_furniture');
+      return data ? JSON.parse(data) : [];
+    } catch {
+      return [];
+    }
+  })(),
+
+  addCustomCatalogItem: (item) => {
+    set((state) => {
+      const updated = [...state.savedCustomFurniture.filter((i) => i.catalogId !== item.catalogId), item];
+      try {
+        localStorage.setItem('sims_saved_furniture', JSON.stringify(updated));
+      } catch {}
+      return { savedCustomFurniture: updated };
+    });
+  },
+
+  removeCustomCatalogItem: (catalogId) => {
+    set((state) => {
+      const updated = state.savedCustomFurniture.filter((i) => i.catalogId !== catalogId);
+      try {
+        localStorage.setItem('sims_saved_furniture', JSON.stringify(updated));
+      } catch {}
+      return { savedCustomFurniture: updated };
+    });
+  },
+
   addCustomTexture: (name, url) => {
     const newTex: CustomTextureItem = {
       id: `tex_${Date.now()}`,
       name: name.trim() || 'Textura Customizada',
       url,
     };
-    set((state) => ({ customTextures: [...state.customTextures, newTex] }));
+    set((state) => {
+      const updated = [...state.customTextures, newTex];
+      try {
+        localStorage.setItem('sims_custom_textures', JSON.stringify(updated));
+      } catch {}
+      return { customTextures: updated };
+    });
   },
 
   removeCustomTexture: (id) => {
@@ -427,7 +483,7 @@ export const useSimsStore = create<SimsState>((set, get) => ({
   rotatePendingFurnitureItem: () => {
     const pending = get().pendingFurnitureItem;
     if (!pending) return;
-    const nextRot = (pending.rotation + 90) % 360;
+    const nextRot = (pending.rotation + 45) % 360;
     set({ pendingFurnitureItem: { ...pending, rotation: nextRot } });
   },
 
@@ -461,12 +517,18 @@ export const useSimsStore = create<SimsState>((set, get) => ({
       terrain: { ...state.terrain, theme },
     })),
 
-  setTerrainCustomAppearance: (color, textureUrl) =>
+  setTerrainCustomAppearance: (color, secondaryColor, textureUrl) =>
     set((state) => ({
-      terrain: { ...state.terrain, customColor: color, customTextureUrl: textureUrl },
+      terrain: {
+        ...state.terrain,
+        customColor: color,
+        customSecondaryColor: secondaryColor,
+        customTextureUrl: textureUrl,
+      },
     })),
 
-  setCustomTerrain: (color, textureUrl) => get().setTerrainCustomAppearance(color, textureUrl),
+  setCustomTerrain: (color, secondaryColor, textureUrl) =>
+    get().setTerrainCustomAppearance(color, secondaryColor, textureUrl),
 
   setZoom: (newZoom, focalX, focalY) => {
     const clampedZoom = Math.max(0.25, Math.min(3.5, newZoom));

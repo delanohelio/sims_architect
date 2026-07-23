@@ -190,7 +190,7 @@ export function CanvasArea() {
               <Sofa className="w-3.5 h-3.5 text-purple-400" />
               <span className="font-semibold text-white">
                 {pendingFurniturePreview
-                  ? 'Modo Compra: Clique para Posicionar o Móvel (Tecla R: Rotacionar 90°)'
+                  ? 'Modo Compra: Clique para Posicionar o Móvel (Tecla R: Rotacionar +45°)'
                   : 'Modo Compra: Selecione um móvel ou clique em um existente para Mover'}
               </span>
             </>
@@ -232,10 +232,10 @@ export function CanvasArea() {
           <span>Z/C/X: Zoom</span>
         </span>
         <span className="flex items-center gap-1">
-          <span>Q/E: Rotação</span>
+          <span>Q/E/F/V: Rotação 3D</span>
         </span>
         <span className="flex items-center gap-1">
-          <span>R: Girar Móvel (90°)</span>
+          <span>R: Girar Móvel (+45°)</span>
         </span>
       </div>
 

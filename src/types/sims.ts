@@ -24,6 +24,7 @@ export interface TerrainConfig {
   cellSizePixels: number; // Pixels por metro na escala 1.0 (padrão: 40px/m)
   theme: TerrainTheme;
   customColor?: string;
+  customSecondaryColor?: string;
   customTextureUrl?: string;
 }
 

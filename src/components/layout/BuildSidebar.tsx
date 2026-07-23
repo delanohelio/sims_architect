@@ -192,7 +192,10 @@ export function BuildSidebar() {
               label="Cor / Textura Inicial da Parede"
               currentColor={selectedWallColor}
               currentTextureUrl={selectedWallTexture}
-              onSelectColor={setSelectedWallColor}
+              onSelectColor={(color) => {
+                setSelectedWallColor(color);
+                setSelectedWallTexture(undefined);
+              }}
               onSelectTextureUrl={setSelectedWallTexture}
             />
 
@@ -224,7 +227,10 @@ export function BuildSidebar() {
               label="Cor ou Imagem de Parede"
               currentColor={selectedWallColor}
               currentTextureUrl={selectedWallTexture}
-              onSelectColor={setSelectedWallColor}
+              onSelectColor={(color) => {
+                setSelectedWallColor(color);
+                setSelectedWallTexture(undefined);
+              }}
               onSelectTextureUrl={setSelectedWallTexture}
             />
 
@@ -253,6 +259,7 @@ export function BuildSidebar() {
               currentTextureUrl={selectedFloorCustomTexture}
               onSelectColor={(color) => {
                 setSelectedFloorColor(color);
+                setSelectedFloorCustomTexture(undefined);
                 setSelectedFloorTexture('custom');
               }}
               onSelectTextureUrl={(url) => {

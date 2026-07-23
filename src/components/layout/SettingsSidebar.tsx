@@ -163,12 +163,80 @@ export function SettingsSidebar() {
           </div>
 
           <ColorTexturePicker
-            label="Cor / Textura Personalizada"
+            label="Cor Primária do Terreno"
             currentColor={terrain.customColor || '#15803D'}
             currentTextureUrl={terrain.customTextureUrl}
-            onSelectColor={(color) => setCustomTerrain(color, terrain.customTextureUrl)}
-            onSelectTextureUrl={(url) => setCustomTerrain(terrain.customColor, url)}
+            onSelectColor={(color) => setCustomTerrain(color, terrain.customSecondaryColor, undefined)}
+            onSelectTextureUrl={(url) => setCustomTerrain(terrain.customColor, terrain.customSecondaryColor, url)}
           />
+
+          {/* SEGUNDA COR PARA GRID DE 2 CORES (XADREZ) */}
+          <div className="p-3 bg-slate-950/80 rounded-2xl border border-slate-800 space-y-2.5">
+            <div className="flex items-center justify-between text-xs font-bold text-white">
+              <span className="flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
+                <span>2ª Cor do Grid (Efeito Xadrez 2 Cores)</span>
+              </span>
+              {terrain.customSecondaryColor && (
+                <button
+                  type="button"
+                  onClick={() => setCustomTerrain(terrain.customColor, undefined, terrain.customTextureUrl)}
+                  className="text-[10px] text-rose-400 hover:underline font-normal"
+                >
+                  Remover 2ª Cor
+                </button>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2">
+              <input
+                type="color"
+                value={terrain.customSecondaryColor || '#166534'}
+                onChange={(e) =>
+                  setCustomTerrain(
+                    terrain.customColor || '#15803D',
+                    e.target.value,
+                    undefined
+                  )
+                }
+                className="w-7 h-7 rounded-lg border-0 bg-transparent cursor-pointer p-0 shrink-0"
+              />
+              <span className="font-mono text-slate-200 uppercase text-xs">
+                {terrain.customSecondaryColor || 'Desativado (Monocromático)'}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-2 gap-1.5 pt-1">
+              <button
+                type="button"
+                onClick={() => setCustomTerrain('#15803D', '#166534', undefined)}
+                className="p-1.5 rounded-lg bg-emerald-950/80 border border-emerald-500/40 text-[11px] font-semibold text-emerald-300 flex items-center justify-center gap-1"
+              >
+                🟩 Grama 2 Cores
+              </button>
+              <button
+                type="button"
+                onClick={() => setCustomTerrain('#0F172A', '#06B6D4', undefined)}
+                className="p-1.5 rounded-lg bg-slate-950 border border-cyan-500/40 text-[11px] font-semibold text-cyan-300 flex items-center justify-center gap-1"
+              >
+                🟦 Dark / Ciano
+              </button>
+              <button
+                type="button"
+                onClick={() => setCustomTerrain('#E2E8F0', '#475569', undefined)}
+                className="p-1.5 rounded-lg bg-slate-800 border border-slate-600 text-[11px] font-semibold text-slate-200 flex items-center justify-center gap-1"
+              >
+                ⬜ Concreto / Slate
+              </button>
+              <button
+                type="button"
+                onClick={() => setCustomTerrain('#78350F', '#D97706', undefined)}
+                className="p-1.5 rounded-lg bg-amber-950/80 border border-amber-500/40 text-[11px] font-semibold text-amber-300 flex items-center justify-center gap-1"
+              >
+                🟫 Madeira / Areia
+              </button>
+            </div>
+          </div>
         </div>
 
         {/* 4. OPÇÕES DO GRID & RÓTULOS */}

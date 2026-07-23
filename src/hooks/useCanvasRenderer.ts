@@ -81,7 +81,7 @@ const FLOOR_COLORS: Record<FloorTextureId, { fill: string; border: string; accen
 export function useCanvasRenderer(
   canvasRef: React.RefObject<HTMLCanvasElement | null>,
   previews?: {
-    draftWall?: { x1: number; y1: number; x2: number; y2: number } | null;
+    draftWall?: { x1: number; y1: number; x2: number; y2: number; isValid?: boolean } | null;
     draftFloorRect?: { x1: number; y1: number; x2: number; y2: number } | null;
     hoveredTarget?: { type: string; id?: string; x?: number; y?: number; wall?: Wall; furniture?: FurnitureItem } | null;
     hoveredWallTarget?: { wall: Wall; offsetRatio: number; pointOnWall: { x: number; y: number } } | null;
@@ -115,16 +115,21 @@ export function useCanvasRenderer(
   } = useSimsStore();
 
   const imageCacheRef = useRef<Map<string, HTMLImageElement>>(new Map());
+  const failedImagesRef = useRef<Set<string>>(new Set());
 
   const getLoadedImage = (url?: string) => {
-    if (!url) return null;
+    if (!url || failedImagesRef.current.has(url)) return null;
     let img = imageCacheRef.current.get(url);
     if (!img) {
       img = new Image();
+      img.onerror = () => {
+        failedImagesRef.current.add(url);
+        imageCacheRef.current.delete(url);
+      };
       img.src = url;
       imageCacheRef.current.set(url, img);
     }
-    return img.complete ? img : null;
+    return (img.complete && img.naturalWidth !== 0) ? img : null;
   };
 
   useEffect(() => {
@@ -172,7 +177,7 @@ export function useCanvasRenderer(
       ctx.rotate((viewState.rotation * Math.PI) / 180);
       ctx.translate(-centerX, -centerY);
 
-      // 3. Terreno Base
+      // 3. Terreno Base (com suporte a 2 Cores para Grid Xadrez)
       ctx.save();
       ctx.shadowColor = 'rgba(0, 0, 0, 0.45)';
       ctx.shadowBlur = 24 / viewState.zoom;
@@ -190,8 +195,15 @@ export function useCanvasRenderer(
       ctx.fillRect(0, 0, terrainWidthPx, terrainLengthPx);
       ctx.restore();
 
-      if (terrain.theme === 'grass' && theme.terrainPatternSecondary && !terrain.customColor && !terrain.customTextureUrl) {
-        ctx.fillStyle = theme.terrainPatternSecondary;
+      // Desenho da Segunda Cor (Grid Xadrez de 2 Cores)
+      const secColor =
+        terrain.customSecondaryColor ||
+        (!terrain.customColor && !terrain.customTextureUrl && terrain.theme === 'grass'
+          ? theme.terrainPatternSecondary
+          : undefined);
+
+      if (secColor && !terrain.customTextureUrl) {
+        ctx.fillStyle = secColor;
         for (let x = 0; x < terrain.width; x++) {
           for (let y = 0; y < terrain.length; y++) {
             if ((x + y) % 2 === 1) {
@@ -598,17 +610,18 @@ export function useCanvasRenderer(
 
       // PREVIEW DE DESENHO DE PAREDE
       if (previews?.draftWall) {
-        const { x1, y1, x2, y2 } = previews.draftWall;
+        const { x1, y1, x2, y2, isValid } = previews.draftWall;
         const px1 = x1 * cellSize;
         const py1 = y1 * cellSize;
         const px2 = x2 * cellSize;
         const py2 = y2 * cellSize;
 
         const meterLen = Math.hypot(x2 - x1, y2 - y1);
+        const wallValid = isValid !== false;
 
         if (meterLen > 0) {
           ctx.save();
-          ctx.strokeStyle = '#F59E0B';
+          ctx.strokeStyle = wallValid ? '#F59E0B' : '#EF4444';
           ctx.lineWidth = 8 / viewState.zoom;
           ctx.setLineDash([8 / viewState.zoom, 6 / viewState.zoom]);
           ctx.beginPath();
@@ -619,7 +632,7 @@ export function useCanvasRenderer(
 
           const midPxX = (px1 + px2) / 2;
           const midPxY = (py1 + py2) / 2;
-          const labelText = `${meterLen.toFixed(1)}m`;
+          const labelText = wallValid ? `${meterLen.toFixed(1)}m` : `Bloqueado (${meterLen.toFixed(1)}m)`;
 
           ctx.save();
           ctx.font = `bold ${Math.max(12, 14 / viewState.zoom)}px Inter, sans-serif`;
@@ -629,15 +642,15 @@ export function useCanvasRenderer(
           const bgW = textMetrics.width + paddingX * 2;
           const bgH = 18 / viewState.zoom + paddingY * 2;
 
-          ctx.fillStyle = 'rgba(15, 23, 42, 0.95)';
-          ctx.strokeStyle = '#F59E0B';
+          ctx.fillStyle = wallValid ? 'rgba(15, 23, 42, 0.95)' : 'rgba(239, 68, 68, 0.95)';
+          ctx.strokeStyle = wallValid ? '#F59E0B' : '#DC2626';
           ctx.lineWidth = 2 / viewState.zoom;
           ctx.beginPath();
           ctx.roundRect(midPxX - bgW / 2, midPxY - bgH / 2 - 12 / viewState.zoom, bgW, bgH, 6 / viewState.zoom);
           ctx.fill();
           ctx.stroke();
 
-          ctx.fillStyle = '#FBBF24';
+          ctx.fillStyle = wallValid ? '#FBBF24' : '#FFFFFF';
           ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
           ctx.fillText(labelText, midPxX, midPxY - 12 / viewState.zoom);

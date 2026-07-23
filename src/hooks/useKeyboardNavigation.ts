@@ -2,19 +2,6 @@ import { useEffect, useRef } from 'react';
 import { useSimsStore } from '../store/useSimsStore';
 
 export function useKeyboardNavigation() {
-  const { 
-    pan, 
-    zoomIn, 
-    zoomOut, 
-    resetZoom, 
-    rotateClockwise, 
-    rotateCounterClockwise,
-    doorsWindows,
-    toggleDoorFlip,
-    activeBuildTool,
-    selectedDoorWindow
-  } = useSimsStore();
-
   const keysPressedRef = useRef<Record<string, boolean>>({});
 
   useEffect(() => {
@@ -26,22 +13,20 @@ export function useKeyboardNavigation() {
 
       keysPressedRef.current[e.code] = true;
 
-      // Atalhos individuais imediatos
-      if (e.code === 'KeyZ') {
-        zoomIn();
-      } else if (e.code === 'KeyC') {
-        zoomOut();
-      } else if (e.code === 'KeyX') {
-        resetZoom();
-      } else if (e.code === 'KeyQ') {
-        rotateCounterClockwise();
-      } else if (e.code === 'KeyE') {
-        rotateClockwise();
-      } else if (e.code === 'KeyR') {
-        // Se houver portas instaladas, inverte a última ou a selecionada
-        if (doorsWindows.length > 0) {
-          const lastDoor = doorsWindows[doorsWindows.length - 1];
-          toggleDoorFlip(lastDoor.id);
+      const store = useSimsStore.getState();
+
+      // Executa atalhos individuais apenas quando estiver no Modo 2D (Modo 3D possui controle próprio)
+      if (store.viewMode === '2d') {
+        if (e.code === 'KeyZ') {
+          store.zoomIn();
+        } else if (e.code === 'KeyC') {
+          store.zoomOut();
+        } else if (e.code === 'KeyX') {
+          store.resetZoom();
+        } else if (e.code === 'KeyQ') {
+          store.rotateCounterClockwise();
+        } else if (e.code === 'KeyE') {
+          store.rotateClockwise();
         }
       }
     };
@@ -53,22 +38,25 @@ export function useKeyboardNavigation() {
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('keyup', handleKeyUp);
 
-    // Loop de Navegação Contínua WASD / Setas (Pan suave)
+    // Loop de Navegação Contínua WASD / Setas no Modo 2D (Pan suave)
     let animationFrameId: number;
     const speed = 12; // Pixels por frame
 
     const tick = () => {
-      const keys = keysPressedRef.current;
-      let dx = 0;
-      let dy = 0;
+      const store = useSimsStore.getState();
+      if (store.viewMode === '2d') {
+        const keys = keysPressedRef.current;
+        let dx = 0;
+        let dy = 0;
 
-      if (keys['KeyW'] || keys['ArrowUp']) dy += speed;
-      if (keys['KeyS'] || keys['ArrowDown']) dy -= speed;
-      if (keys['KeyA'] || keys['ArrowLeft']) dx += speed;
-      if (keys['KeyD'] || keys['ArrowRight']) dx -= speed;
+        if (keys['KeyW'] || keys['ArrowUp']) dy += speed;
+        if (keys['KeyS'] || keys['ArrowDown']) dy -= speed;
+        if (keys['KeyA'] || keys['ArrowLeft']) dx += speed;
+        if (keys['KeyD'] || keys['ArrowRight']) dx -= speed;
 
-      if (dx !== 0 || dy !== 0) {
-        pan(dx, dy);
+        if (dx !== 0 || dy !== 0) {
+          store.pan(dx, dy);
+        }
       }
 
       animationFrameId = requestAnimationFrame(tick);
@@ -81,5 +69,5 @@ export function useKeyboardNavigation() {
       window.removeEventListener('keyup', handleKeyUp);
       cancelAnimationFrame(animationFrameId);
     };
-  }, [pan, zoomIn, zoomOut, resetZoom, rotateClockwise, rotateCounterClockwise, doorsWindows, toggleDoorFlip, activeBuildTool, selectedDoorWindow]);
+  }, []);
 }

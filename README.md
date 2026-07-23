@@ -65,17 +65,34 @@ O **Sims Architect** é uma aplicação web interativa de arquitetura e design d
     - 🟣 **Sombra no Lado B (Estendida para fora no Lado B)**: Clique para **Pintar Apenas o Lado B**.
 
 ### 5. 🛋️ FASE 3: Modo Compra / Mobiliário (`buy`)
-- **Catálogo de Móveis por Categoria**:
+- **Catálogo de Móveis por Categoria & Itens Customizados**:
   - Abas temáticas: 🛏️ **Quarto**, 🛋️ **Sala**, 🍳 **Cozinha**, 🚿 **Banheiro**, 🌿 **Exterior/Decoração**, 📦 **Customizado**.
-- **Móvel Genérico Customizado**:
-  - Configuração de **Nome Customizado**, Sliders de **Largura ($W$)**, **Profundidade ($D$)** e **Altura ($H$)** ($0.3\text{m} \dots 5.0\text{m}$), **Formato Geométrico 3D (Caixa / Cilindro)** e **Cor ou Textura de Imagem da Galeria Global**.
-- **Ghosting, Snap Suave & Rotação Tecla 'R'**:
+  - **Ajuste de UI sem Scroll Horizontal**: Todo o card do móvel é um botão clicável responsivo, destacando a seleção sem exigir botões extras nem barras de rolagem.
+- **Móvel Genérico Customizado & Salvamento no Catálogo**:
+  - Configuração de **Nome Customizado**, Categoria Específica, Sliders de **Largura ($W$)**, **Profundidade ($D$)** e **Altura ($H$)** ($0.3\text{m} \dots 5.0\text{m}$), **Formato 3D (Caixa / Cilindro)** e **Aparência (Cor ou Textura)**.
+  - **Salvar no Catálogo**: Permite registrar o móvel customizado no catálogo local (com persistência no `localStorage`).
+  - **Exibição Multicategoria com Badge Especial**: O móvel customizado salvo aparece tanto na aba **"Customizado"** quanto na aba da sua **categoria escolhida (ex: Sala, Quarto)**, com borda roxa brilhante e badge `★ Custom` em destaque.
+- **Seleção de Cor Sólida e Limpeza de Texturas (Pisos, Paredes e Terreno)**:
+  - Corrigido o fluxo de seleção: ao escolher uma **Cor Sólida** nas ferramentas de pisos, paredes ou terreno, o sistema remove a textura de imagem ativa prévia (`textureUrl = undefined`), garantindo que a cor sólida escolhida seja aplicada imediatamente tanto no 2D quanto no 3D.
+- **Terreno com Grid Xadrez de 2 Cores (Customizável)**:
+  - Adicionado suporte a **Cor Primária** (`customColor`) e **Cor Secundária** (`customSecondaryColor`) nas configurações do terreno.
+  - Renderiza um padrão xadrez/grid métrico de duas cores no Canvas 2D e gera automaticamente uma textura `CanvasTexture` correspondente no Three.js 3D.
+  - Inclui presets rápidos: **🟩 Grama 2 Cores**, **🟦 Dark / Ciano**, **⬜ Concreto / Slate** e **🟫 Madeira / Areia**.
+- **Navegação Orbital 3D Completa por Teclado**:
+  - **WASD / Setas**: Pan/Strafe horizontal no terreno 3D.
+  - **Q / E**: Rotação orbital horizontal da câmera (esquerda / direita).
+  - **F / V**: Rotação orbital vertical da câmera (**F = Inclinar para Cima / olhar para baixo**, **V = Inclinar para Baixo / olhar para o horizonte**).
+  - **Z / C**: Zoom In / Zoom Out (Dolly).
+  - **X**: Reseta enquadramento inicial 3D.
+- **Layout Limpo & Sem Extrapolação (`ColorTexturePicker.tsx`)**:
+  - Interface responsiva com seletores de cores sólidas e miniaturas de textura com `onError` fallback para caber perfeitamente no menu lateral sem overflow.
+- **Ghosting, Snap Suave & Rotação Tecla 'R' (Passos de 45°)**:
   - Fantasma translúcido do móvel segue o cursor do mouse.
   - Imantação suave a cada $0.1\text{m}$ ($10\text{cm}$) no plano.
-  - Tecla **R**: Rotaciona o móvel em $+90^\circ$, recalculando o Bounding Box $AABB$.
-- **Validação de Colisão AABB em Tempo Real**:
-  - Fantasma **Vermelho** se colidir com paredes ou outros móveis (posição proibida).
-  - Fantasma **Ciano/Verde** quando o espaço está livre para inserção.
+  - Tecla **R**: Rotaciona o móvel em $+45^\circ$ (permite alinhamento ortogonal e em diagonal $45^\circ, 135^\circ, 225^\circ, 315^\circ$), recalculando o Bounding Box $AABB$ tridimensional.
+- **Validação de Colisão Bidirecional AABB em Tempo Real**:
+  - Fantasma **Vermelho** se colidir com paredes ou outros móveis (posição proibida para o móvel).
+  - **Bloqueio de Paredes sobre Móveis**: Tentar construir uma parede em cima de qualquer móvel de compra posicionado exibe o rascunho de parede em **Vermelho** com badge `Bloqueado` e impede a construção.
 - **Mover e Re-rotacionar Móveis Existentes**:
   - Clicar sobre qualquer móvel posicionado na planta permite selecionar e sair movendo ele pela casa, podendo rotacionar com a tecla **R** e refixar no local desejado.
 - **Renderização 2D (Top-Down Arquitetônico)**:
