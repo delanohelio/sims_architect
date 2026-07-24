@@ -263,7 +263,26 @@ export function Viewport3D() {
       frameMesh.castShadow = true;
       dwGroup.add(frameMesh);
 
-      if (dw.type === 'window') {
+      if (dw.isSliding || dw.catalogId === 'door_sliding') {
+        const glassMat = new THREE.MeshPhysicalMaterial({
+          color: 0x87ceeb,
+          transmission: 0.85,
+          opacity: 0.9,
+          transparent: true,
+          roughness: 0.1,
+          ior: 1.5,
+          thickness: 0.02,
+        });
+        const panelGeo = new THREE.BoxGeometry(dwWidth * 0.48, dwHeight * 0.88, 0.04);
+
+        const panel1 = new THREE.Mesh(panelGeo, glassMat);
+        panel1.position.set(-dwWidth * 0.22, 0, -0.04);
+        dwGroup.add(panel1);
+
+        const panel2 = new THREE.Mesh(panelGeo, glassMat);
+        panel2.position.set(dwWidth * 0.22, 0, 0.04);
+        dwGroup.add(panel2);
+      } else if (dw.type === 'window') {
         const glassMat = new THREE.MeshPhysicalMaterial({
           color: 0x87ceeb,
           transmission: 0.9,

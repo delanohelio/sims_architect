@@ -146,11 +146,23 @@ export function exportPlanToDataUrl(
     ctx.rotate(angle);
 
     const dwWidthPx = (dw.width || 0.9) * cellSize;
-    ctx.fillStyle = dw.type === 'door' ? '#F59E0B' : '#38BDF8';
-    ctx.fillRect(-dwWidthPx / 2, -5, dwWidthPx, 10);
-    ctx.strokeStyle = '#FFFFFF';
-    ctx.lineWidth = 1;
-    ctx.strokeRect(-dwWidthPx / 2, -5, dwWidthPx, 10);
+    const isSliding = dw.isSliding || dw.catalogId === 'door_sliding';
+
+    if (isSliding) {
+      ctx.fillStyle = '#10B981';
+      ctx.fillRect(-dwWidthPx / 2, -6, dwWidthPx / 2 + 2, 5);
+      ctx.fillStyle = '#38BDF8';
+      ctx.fillRect(-2, 1, dwWidthPx / 2 + 2, 5);
+      ctx.strokeStyle = '#FFFFFF';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(-dwWidthPx / 2, -6, dwWidthPx, 12);
+    } else {
+      ctx.fillStyle = dw.type === 'door' ? '#F59E0B' : '#38BDF8';
+      ctx.fillRect(-dwWidthPx / 2, -5, dwWidthPx, 10);
+      ctx.strokeStyle = '#FFFFFF';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(-dwWidthPx / 2, -5, dwWidthPx, 10);
+    }
 
     // Cota de Dimensão da Esquadria (Largura × Altura)
     const dimText = dw.height ? `${dw.width}m × ${dw.height}m` : `${dw.width}m`;

@@ -36,6 +36,7 @@ export function BuySidebar() {
     pendingFurnitureItem,
     setPendingFurnitureItem,
     rotatePendingFurnitureItem,
+    setPendingFurnitureRotation,
     cancelPendingFurnitureItem,
     savedCustomFurniture,
     addCustomCatalogItem,
@@ -124,7 +125,7 @@ export function BuySidebar() {
 
       {/* PAINEL DE ITEM PENDENTE DE INSERÇÃO */}
       {pendingFurnitureItem && (
-        <div className="p-3 m-3 bg-purple-950/60 border border-purple-500/40 rounded-2xl flex flex-col gap-2 animate-in fade-in slide-in-from-top-2 duration-200">
+        <div className="p-3.5 m-3 bg-purple-950/70 border border-purple-500/50 rounded-2xl flex flex-col gap-2.5 animate-in fade-in slide-in-from-top-2 duration-200">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-purple-300 flex items-center gap-1.5">
               <Sparkles className="w-3.5 h-3.5 text-purple-400" />
@@ -145,17 +146,60 @@ export function BuySidebar() {
             <span>
               Dimensões: {pendingFurnitureItem.catalogItem.width}m × {pendingFurnitureItem.catalogItem.depth}m
             </span>
-            <span className="text-amber-300 font-semibold">{pendingFurnitureItem.rotation}°</span>
           </div>
 
-          <div className="flex items-center gap-2 pt-1">
-            <button
-              onClick={rotatePendingFurnitureItem}
-              className="flex-1 py-1.5 px-3 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-semibold text-xs flex items-center justify-center gap-1.5 transition-all shadow-md active:scale-95"
-            >
-              <RotateCw className="w-3.5 h-3.5" />
-              Rotacionar +45° (R)
-            </button>
+          {/* BOX DE DIGITAÇÃO DIRETA DO ÂNGULO DO MÓVEL (0° - 360°) */}
+          <div className="p-2.5 bg-slate-950/80 rounded-xl border border-purple-500/30 space-y-2 text-xs">
+            <div className="flex items-center justify-between">
+              <label className="text-[11px] font-bold text-purple-200 flex items-center gap-1">
+                <RotateCw className="w-3 h-3 text-purple-400" />
+                <span>Ângulo do Móvel (Digitação Direta):</span>
+              </label>
+              <span className="text-[10px] font-mono text-purple-400 bg-purple-500/20 px-1.5 py-0.5 rounded border border-purple-500/30">
+                {pendingFurnitureItem.rotation}°
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <input
+                type="number"
+                min="0"
+                max="359"
+                step="1"
+                value={pendingFurnitureItem.rotation}
+                onChange={(e) => setPendingFurnitureRotation(Number(e.target.value))}
+                className="w-24 bg-slate-900 border border-purple-500/50 rounded-lg px-2 py-1 text-center font-mono font-bold text-white text-xs outline-none focus:border-purple-400 transition-all"
+              />
+              <span className="text-purple-300 text-xs font-bold">graus (º)</span>
+
+              <button
+                type="button"
+                onClick={rotatePendingFurnitureItem}
+                className="ml-auto py-1 px-2.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-semibold text-[11px] flex items-center gap-1 transition-all shadow"
+                title="Girar +45° (Atalho R)"
+              >
+                <RotateCw className="w-3 h-3" />
+                <span>+45° (R)</span>
+              </button>
+            </div>
+
+            {/* PRESETS RÁPIDOS DE ÂNGULO */}
+            <div className="grid grid-cols-6 gap-1 pt-1 border-t border-purple-500/20">
+              {[0, 45, 90, 135, 180, 270].map((angle) => (
+                <button
+                  key={angle}
+                  type="button"
+                  onClick={() => setPendingFurnitureRotation(angle)}
+                  className={`py-0.5 rounded text-[10px] font-mono font-bold transition-all ${
+                    pendingFurnitureItem.rotation === angle
+                      ? 'bg-purple-500 text-slate-950 shadow'
+                      : 'bg-slate-900 text-slate-300 hover:bg-slate-800'
+                  }`}
+                >
+                  {angle}°
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       )}

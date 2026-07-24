@@ -14,6 +14,7 @@ import type {
   Wall,
   FloorTile,
   DoorWindow,
+  DoorWindowCatalogItem,
   FurnitureItem,
   FurnitureCatalogItem,
   FurnitureCategory,
@@ -79,14 +80,7 @@ export interface PendingFurniturePlacement {
   movingItemId?: string;
 }
 
-export interface DoorWindowCatalogItem {
-  catalogId: string;
-  name: string;
-  type: 'door' | 'window';
-  width: number;
-  height?: number;
-  isCustom?: boolean;
-}
+
 
 export interface PendingDoorPlacement {
   step: 'hinge' | 'swing';
@@ -105,6 +99,7 @@ export interface PendingDoorPlacement {
 export const CATALOG_DOORS_WINDOWS: DoorWindowCatalogItem[] = [
   { catalogId: 'door_single', name: 'Porta Simples Padrão', type: 'door', width: 0.9, height: 2.1 },
   { catalogId: 'door_double', name: 'Porta Dupla Social', type: 'door', width: 1.6, height: 2.1 },
+  { catalogId: 'door_sliding', name: 'Porta de Correr (Sem Dobradiça)', type: 'door', width: 1.8, height: 2.1, isSliding: true },
   { catalogId: 'window_standard', name: 'Janela Padrão 2 Folhas', type: 'window', width: 1.2, height: 1.2 },
   { catalogId: 'window_large', name: 'Janela Panorâmica', type: 'window', width: 2.2, height: 1.4 },
   { catalogId: 'custom_opening', name: 'Esquadria Genérica Customizada', type: 'door', width: 1.0, height: 2.1, isCustom: true },
@@ -192,6 +187,7 @@ interface SimsState {
   setSelectedBuyCategory: (category: FurnitureCategory) => void;
   setPendingFurnitureItem: (pending: PendingFurniturePlacement | null) => void;
   rotatePendingFurnitureItem: () => void;
+  setPendingFurnitureRotation: (rotation: number) => void;
   cancelPendingFurnitureItem: () => void;
   setCustomFurnitureName: (name: string) => void;
   setCustomFurnitureWidth: (width: number) => void;
@@ -513,6 +509,13 @@ export const useSimsStore = create<SimsState>()(
     if (!pending) return;
     const nextRot = (pending.rotation + 45) % 360;
     set({ pendingFurnitureItem: { ...pending, rotation: nextRot } });
+  },
+
+  setPendingFurnitureRotation: (rotation) => {
+    const pending = get().pendingFurnitureItem;
+    if (!pending) return;
+    const normalized = Math.round(((rotation % 360) + 360) % 360);
+    set({ pendingFurnitureItem: { ...pending, rotation: normalized } });
   },
 
   cancelPendingFurnitureItem: () => set({ pendingFurnitureItem: null }),

@@ -21,7 +21,9 @@ interface HoveredWallTarget {
 export function useBuildInteractions() {
   const {
     activeMode,
+    setMode,
     activeBuildTool,
+    setActiveBuildTool,
     terrain,
     selectedFloorTexture,
     selectedFloorColor,
@@ -78,6 +80,12 @@ export function useBuildInteractions() {
 
       if (e.code === 'KeyR' || e.key === 'r' || e.key === 'R') {
         rotatePendingFurnitureItem();
+      }
+
+      if (e.code === 'KeyH' || e.key === 'h' || e.key === 'H' || e.code === 'Delete') {
+        // Atalho H (Hammer / Marreta): Ativa ferramenta de remoção / marreta
+        setMode('build');
+        setActiveBuildTool('eraser');
       }
 
       if (e.code === 'Escape') {
@@ -451,12 +459,13 @@ export function useBuildInteractions() {
         if (hoveredWallTarget) {
           const item = selectedDoorWindow;
           const isDoor = item.type === 'door';
+          const isSliding = item.isSliding || item.catalogId === 'door_sliding';
 
           const dwWidth = item.isCustom ? customDoorWidth : item.width;
           const dwHeight = item.isCustom ? customDoorHeight : (item.height || (isDoor ? 2.1 : 1.2));
           const dwColor = customDoorFrameColor;
 
-          if (isDoor) {
+          if (isDoor && !isSliding) {
             setPendingDoor({
               step: 'hinge',
               wallId: hoveredWallTarget.wall.id,
@@ -472,7 +481,7 @@ export function useBuildInteractions() {
             });
           } else {
             addDoorWindow({
-              type: 'window',
+              type: item.type,
               catalogId: item.catalogId,
               name: item.name,
               wallId: hoveredWallTarget.wall.id,
@@ -480,6 +489,7 @@ export function useBuildInteractions() {
               width: dwWidth,
               height: dwHeight,
               frameColor: dwColor,
+              isSliding,
             });
           }
         }

@@ -81,6 +81,16 @@ export interface FloorTile {
   customTextureUrl?: string;
 }
 
+export interface DoorWindowCatalogItem {
+  catalogId: string;
+  name: string;
+  type: 'door' | 'window';
+  width: number;
+  height: number;
+  isCustom?: boolean;
+  isSliding?: boolean;
+}
+
 export interface DoorWindow {
   id: string;
   type: 'door' | 'window';
@@ -93,6 +103,7 @@ export interface DoorWindow {
   flipSide?: boolean;  // Inverte o lado de abertura (dentro/fora)
   flipSwing?: boolean; // Inverte o giro da dobradiça (esquerda/direita)
   frameColor?: string; // Cor personalizada da moldura
+  isSliding?: boolean; // Porta de correr sem dobradiça
 }
 
 export interface FurnitureCatalogItem {
@@ -118,7 +129,7 @@ export interface FurnitureItem {
   height: number;
   x: number; // posição X central em metros
   y: number; // posição Y central em metros
-  rotation: number; // 0, 90, 180, 270 graus
+  rotation: number; // 0 a 360 graus
   color: string;
   textureUrl?: string;
   primitiveShape?: 'box' | 'cylinder';

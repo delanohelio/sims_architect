@@ -407,7 +407,28 @@ export function useCanvasRenderer(
         ctx.fillStyle = terrain.customColor || theme.terrainFill;
         ctx.fillRect(-dwPxWidth / 2, -6 / viewState.zoom, dwPxWidth, 12 / viewState.zoom);
 
-        if (dw.type === 'door') {
+        if (dw.isSliding || dw.catalogId === 'door_sliding') {
+          // DESENHO TÉCNICO DE PORTA DE CORRER SEM DOBRADIÇA (2 PAINÉIS DESLIZANTES OVERLAPPING)
+          ctx.strokeStyle = dw.frameColor || '#10B981';
+          ctx.lineWidth = 2.5 / viewState.zoom;
+
+          // Painel 1 (Fixo)
+          ctx.strokeRect(-dwPxWidth / 2, -5 / viewState.zoom, dwPxWidth / 2 + 2 / viewState.zoom, 4 / viewState.zoom);
+          ctx.fillStyle = 'rgba(16, 185, 129, 0.3)';
+          ctx.fillRect(-dwPxWidth / 2, -5 / viewState.zoom, dwPxWidth / 2 + 2 / viewState.zoom, 4 / viewState.zoom);
+
+          // Painel 2 (Deslizante)
+          ctx.strokeRect(-2 / viewState.zoom, 1 / viewState.zoom, dwPxWidth / 2 + 2 / viewState.zoom, 4 / viewState.zoom);
+          ctx.fillStyle = 'rgba(56, 189, 248, 0.4)';
+          ctx.fillRect(-2 / viewState.zoom, 1 / viewState.zoom, dwPxWidth / 2 + 2 / viewState.zoom, 4 / viewState.zoom);
+
+          // Seta Indicadora de Deslizamento ↔
+          ctx.fillStyle = '#38BDF8';
+          ctx.font = `bold ${Math.max(8, 10 / viewState.zoom)}px Inter, sans-serif`;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText('↔', 0, -9 / viewState.zoom);
+        } else if (dw.type === 'door') {
           ctx.strokeStyle = dw.frameColor || '#F59E0B';
           ctx.lineWidth = 3 / viewState.zoom;
 

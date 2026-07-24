@@ -72,6 +72,14 @@ O **Sims Architect** é uma aplicação web interativa de arquitetura e design d
   - Configuração de **Nome Customizado**, Categoria Específica, Sliders de **Largura ($W$)**, **Profundidade ($D$)** e **Altura ($H$)** ($0.3\text{m} \dots 5.0\text{m}$), **Formato 3D (Caixa / Cilindro)** e **Aparência (Cor ou Textura)**.
   - **Salvar no Catálogo**: Permite registrar o móvel customizado no catálogo local (com persistência no `localStorage`).
   - **Exibição Multicategoria com Badge Especial**: O móvel customizado salvo aparece tanto na aba **"Customizado"** quanto na aba da sua **categoria escolhida (ex: Sala, Quarto)**, com borda roxa brilhante e badge `★ Custom` em destaque.
+- **Digitação Direta do Ângulo de Rotação de Móveis ($0^\circ \dots 360^\circ$)**:
+  - Adicionada caixa de texto numérico para digitação direta do ângulo exato de rotação do móvel (ex: $30^\circ$, $45^\circ$, $135^\circ$, $270^\circ$) na barra lateral ([BuySidebar.tsx](file:///Users/delano/dev/sims-architect/src/components/layout/BuySidebar.tsx)), além dos botões de preset rápido.
+- **Porta Especial de Correr sem Dobradiça (`door_sliding`)**:
+  - Adicionada a **Porta de Correr (Sem Dobradiça)** no catálogo de esquadrias com largura padrão de $1.8\text{m}$.
+  - Instalação direta na parede em 1 clique sem etapas de dobradiça/giro.
+  - Desenho técnico 2D com 2 painéis paralelos e setas indicadoras de deslizamento `↔`, e modelo 3D WebGL com esquadria dupla e vidro transparente.
+- **Atalho de Teclado para Ferramenta de Marreta (`H` / `Delete`)**:
+  - Pressionar a tecla **`H`** (Hammer) ou **`Delete`** em qualquer momento ativa instantaneamente a ferramenta de **Remoção / Marreta (`eraser`)**.
 - **Correção da Seleção de Cor Sólida para Pintura de Pisos (`useSimsStore.ts` & `BuildSidebar.tsx`)**:
   - **Causa Raiz Identificada**: A action `setSelectedFloorTexture(textureId, color, customUrl)` ao ser chamada sem o 2º parâmetro (`color`) sobrescrevia a cor selecionada com `undefined`, resetando a cor da ferramenta de piso.
   - **Resolução**: A action `setSelectedFloorTexture` foi corrigida na store para preservar a cor do estado quando não for explicitamente passada como `undefined`. Além disso, a chamada em `BuildSidebar.tsx` passa explicitamente a cor desejada `setSelectedFloorTexture('custom', color, undefined)`, garantindo que a cor sólida selecionada seja mantida ativa.
