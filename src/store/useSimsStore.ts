@@ -180,6 +180,7 @@ interface SimsState {
   setSelectedFloorCustomTexture: (url?: string) => void;
 
   setSelectedDoorWindow: (item: DoorWindowCatalogItem) => void;
+  setCustomDoorType: (type: 'door' | 'window') => void;
   setCustomDoorWidth: (width: number) => void;
   setCustomDoorHeight: (height: number) => void;
   setCustomDoorFrameColor: (color: string) => void;
@@ -472,11 +473,11 @@ export const useSimsStore = create<SimsState>()(
   setSelectedWallTexture: (url) => set({ selectedWallTexture: url }),
 
   setSelectedFloorTexture: (textureId, color, customUrl) =>
-    set({
+    set((state) => ({
       selectedFloorTexture: textureId,
-      selectedFloorColor: color,
+      selectedFloorColor: color !== undefined ? color : (textureId === 'custom' ? state.selectedFloorColor : undefined),
       selectedFloorCustomTexture: customUrl,
-    }),
+    })),
 
   setSelectedFloorColor: (color) => set({ selectedFloorColor: color }),
   setSelectedFloorCustomTexture: (url) => set({ selectedFloorCustomTexture: url }),
@@ -485,6 +486,15 @@ export const useSimsStore = create<SimsState>()(
     get().cancelPendingDoor();
     set({ selectedDoorWindow: item });
   },
+
+  setCustomDoorType: (type) =>
+    set((state) => ({
+      selectedDoorWindow: {
+        ...state.selectedDoorWindow,
+        type,
+        name: type === 'door' ? 'Porta Customizada' : 'Janela Customizada',
+      },
+    })),
 
   setCustomDoorWidth: (width) => set({ customDoorWidth: width }),
   setCustomDoorHeight: (height) => set({ customDoorHeight: height }),

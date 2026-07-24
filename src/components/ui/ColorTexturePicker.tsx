@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { Palette, Upload, Link as LinkIcon, Trash2, Check, Image as ImageIcon, Plus } from 'lucide-react';
 import { useSimsStore } from '../../store/useSimsStore';
 import { urlToDataUrl, fileToDataUrl } from '../../utils/imageStorage';
@@ -40,23 +40,32 @@ export function ColorTexturePicker({
   const { customTextures, addCustomTexture, removeCustomTexture } = useSimsStore();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  const [appearanceType, setAppearanceType] = useState<'color' | 'texture'>(activeTextureUrl ? 'texture' : 'color');
+  const [appearanceType, setAppearanceType] = useState<'color' | 'texture'>(
+    activeTextureUrl ? 'texture' : 'color'
+  );
   const [showUrlInput, setShowUrlInput] = useState(false);
   const [urlInputValue, setUrlInputValue] = useState('');
 
+  // Sincroniza a aba ativa quando a prop de textura muda explicitamente
+  useEffect(() => {
+    if (activeTextureUrl) {
+      setAppearanceType('texture');
+    }
+  }, [activeTextureUrl]);
+
   const handleChooseColor = (color: string) => {
+    setAppearanceType('color');
     onSelectColor(color);
     if (handleSelectTex) {
       handleSelectTex(undefined);
     }
-    setAppearanceType('color');
   };
 
   const handleChooseTexture = (url: string) => {
+    setAppearanceType('texture');
     if (handleSelectTex) {
       handleSelectTex(url);
     }
-    setAppearanceType('texture');
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -95,12 +104,9 @@ export function ColorTexturePicker({
         <div className="flex items-center gap-0.5 bg-slate-900 p-0.5 rounded-lg border border-slate-800 shrink-0">
           <button
             type="button"
-            onClick={() => {
-              if (handleSelectTex) handleSelectTex(undefined);
-              setAppearanceType('color');
-            }}
+            onClick={() => handleChooseColor(activeColor)}
             className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all ${
-              appearanceType === 'color' && !activeTextureUrl
+              appearanceType === 'color'
                 ? 'bg-amber-500 text-slate-950 shadow'
                 : 'text-slate-400 hover:text-slate-200'
             }`}
@@ -111,7 +117,7 @@ export function ColorTexturePicker({
             type="button"
             onClick={() => setAppearanceType('texture')}
             className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all ${
-              appearanceType === 'texture' || activeTextureUrl
+              appearanceType === 'texture'
                 ? 'bg-cyan-500 text-slate-950 shadow'
                 : 'text-slate-400 hover:text-slate-200'
             }`}
@@ -122,7 +128,7 @@ export function ColorTexturePicker({
       </div>
 
       {/* ABA 1: CORES SÓLIDAS */}
-      {appearanceType === 'color' && !activeTextureUrl && (
+      {appearanceType === 'color' && (
         <div className="space-y-2.5 animate-in fade-in duration-150">
           <label className="flex items-center gap-2 p-1.5 bg-slate-900 border border-slate-800 rounded-xl cursor-pointer hover:border-slate-700 transition-all">
             <input
@@ -135,7 +141,7 @@ export function ColorTexturePicker({
           </label>
 
           <div className="space-y-1">
-            <span className="text-[10px] text-slate-400 font-semibold block">Paleta de Cores:</span>
+            <span className="text-[10px] text-slate-400 font-semibold block">Paleta de Cores Rápidas:</span>
             <div className="grid grid-cols-8 gap-1">
               {presetColors.map((color) => {
                 const isSelected = activeColor.toLowerCase() === color.toLowerCase() && !activeTextureUrl;
@@ -159,12 +165,12 @@ export function ColorTexturePicker({
       )}
 
       {/* ABA 2: GALERIA DE TEXTURAS DE IMAGEM */}
-      {(appearanceType === 'texture' || activeTextureUrl) && (
+      {appearanceType === 'texture' && (
         <div className="space-y-2.5 animate-in fade-in duration-150">
           <div className="flex items-center justify-between gap-1">
             <span className="text-[11px] font-bold text-white flex items-center gap-1 min-w-0 truncate">
               <ImageIcon className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
-              <span className="truncate">Texturas</span>
+              <span className="truncate">Texturas de Imagem</span>
             </span>
 
             <div className="flex items-center gap-1 shrink-0">

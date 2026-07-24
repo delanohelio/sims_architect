@@ -32,6 +32,7 @@ export function BuildSidebar() {
     setSelectedWallTexture,
     selectedDoorWindow,
     setSelectedDoorWindow,
+    setCustomDoorType,
     customDoorWidth,
     setCustomDoorWidth,
     customDoorHeight,
@@ -246,57 +247,84 @@ export function BuildSidebar() {
             <div className="flex items-center justify-between">
               <label className="text-xs font-bold text-white flex items-center gap-2">
                 <Palette className="w-4 h-4 text-emerald-400" />
-                <span>Catálogo de Pisos</span>
+                <span>Pintura e Aparência de Pisos</span>
               </label>
               <span className="text-[11px] font-mono font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
                 {Object.keys(floors).length} m² pintados
               </span>
             </div>
 
+            {/* SELEÇÃO 1: COR SÓLIDA OU TEXTURA CUSTOMIZADA */}
             <ColorTexturePicker
-              label="Cor / Imagem Personalizada de Piso"
+              label="Piso Personalizado (Cor Sólida ou Textura)"
               currentColor={selectedFloorColor || '#78350F'}
               currentTextureUrl={selectedFloorCustomTexture}
               onSelectColor={(color) => {
                 setSelectedFloorColor(color);
                 setSelectedFloorCustomTexture(undefined);
-                setSelectedFloorTexture('custom');
+                setSelectedFloorTexture('custom', color, undefined);
               }}
               onSelectTextureUrl={(url) => {
                 setSelectedFloorCustomTexture(url);
-                setSelectedFloorTexture('custom');
+                setSelectedFloorTexture('custom', undefined, url);
               }}
             />
 
-            <div className="grid grid-cols-1 gap-2 border-t border-slate-800/80 pt-3">
-              {floorOptions.map((f) => {
-                const isSelected = selectedFloorTexture === f.id;
-                return (
-                  <button
-                    key={f.id}
-                    onClick={() => {
-                      setSelectedFloorTexture(f.id);
-                      setSelectedFloorCustomTexture(undefined);
-                    }}
-                    className={`p-2.5 rounded-2xl border text-left flex items-center gap-3 transition-all ${
-                      isSelected
-                        ? 'bg-emerald-500/15 border-emerald-500/80 text-white ring-1 ring-emerald-500/40 shadow-md'
-                        : 'bg-slate-950/40 border-slate-800 text-slate-300 hover:bg-slate-800/50'
-                    }`}
-                  >
-                    <div className="p-1.5 rounded-xl bg-slate-900 border border-slate-700 shrink-0">
-                      {f.iconSvg}
-                    </div>
+            {/* SELEÇÃO 2: MODELOS PREDEFINIDOS DO CATÁLOGO DE PISOS */}
+            <div className="space-y-2 border-t border-slate-800/80 pt-3">
+              <label className="text-[11px] font-bold text-slate-300 block">
+                Modelos de Pisos Predefinidos (Madeira, Mármore...):
+              </label>
+
+              <div className="grid grid-cols-1 gap-2">
+                {/* Opção Ativa de Cor Sólida Personalizada se selecionada */}
+                {selectedFloorTexture === 'custom' && !selectedFloorCustomTexture && selectedFloorColor && (
+                  <div className="p-2.5 rounded-2xl border bg-amber-500/15 border-amber-500/80 text-white ring-1 ring-amber-500/40 shadow-md flex items-center gap-3">
+                    <div
+                      className="w-8 h-8 rounded-xl border border-slate-700 shrink-0 shadow-sm"
+                      style={{ backgroundColor: selectedFloorColor }}
+                    />
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between font-semibold text-xs text-white">
-                        <span>{f.name}</span>
-                        {isSelected && <Check className="w-3.5 h-3.5 text-emerald-400" />}
+                      <div className="flex items-center justify-between font-bold text-xs text-white">
+                        <span>Cor Sólida Personalizada</span>
+                        <Check className="w-3.5 h-3.5 text-amber-400" />
                       </div>
-                      <p className="text-[11px] text-slate-400 truncate mt-0.5">{f.desc}</p>
+                      <p className="text-[11px] font-mono text-amber-300 uppercase truncate mt-0.5">
+                        {selectedFloorColor} (Ativo para Pintar)
+                      </p>
                     </div>
-                  </button>
-                );
-              })}
+                  </div>
+                )}
+
+                {floorOptions.map((f) => {
+                  const isSelected = selectedFloorTexture === f.id;
+                  return (
+                    <button
+                      key={f.id}
+                      type="button"
+                      onClick={() => {
+                        setSelectedFloorTexture(f.id, undefined, undefined);
+                      }}
+                      className={`p-2.5 rounded-2xl border text-left flex items-center gap-3 transition-all ${
+                        isSelected
+                          ? 'bg-emerald-500/15 border-emerald-500/80 text-white ring-1 ring-emerald-500/40 shadow-md'
+                          : 'bg-slate-950/40 border-slate-800 text-slate-300 hover:bg-slate-800/50'
+                      }`}
+                    >
+                      <div className="p-1.5 rounded-xl bg-slate-900 border border-slate-700 shrink-0">
+                        {f.iconSvg}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between font-semibold text-xs text-white">
+                          <span>{f.name}</span>
+                          {isSelected && <Check className="w-3.5 h-3.5 text-emerald-400" />}
+                        </div>
+                        <p className="text-[11px] text-slate-400 truncate mt-0.5">{f.desc}</p>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </div>
         )}
@@ -336,9 +364,40 @@ export function BuildSidebar() {
             {/* Opções Personalizadas para Esquadria Genérica */}
             {selectedDoorWindow.isCustom && (
               <div className="p-3 bg-slate-950/80 rounded-2xl border border-slate-800 space-y-3 text-xs">
-                <div className="flex items-center gap-1.5 font-bold text-white">
-                  <Sliders className="w-3.5 h-3.5 text-cyan-400" />
-                  <span>Dimensões da Esquadria Genérica</span>
+                <div className="flex items-center justify-between font-bold text-white">
+                  <span className="flex items-center gap-1.5">
+                    <Sliders className="w-3.5 h-3.5 text-cyan-400" />
+                    <span>Esquadria Genérica Customizada</span>
+                  </span>
+                </div>
+
+                {/* Seleção do Tipo: Porta vs Janela */}
+                <div>
+                  <span className="text-slate-400 text-[11px] font-semibold block mb-1">Tipo de Esquadria:</span>
+                  <div className="grid grid-cols-2 gap-1.5 p-1 bg-slate-900 rounded-xl border border-slate-800">
+                    <button
+                      type="button"
+                      onClick={() => setCustomDoorType('door')}
+                      className={`py-1 px-2 rounded-lg text-xs font-bold transition-all ${
+                        selectedDoorWindow.type === 'door'
+                          ? 'bg-amber-500 text-slate-950 shadow'
+                          : 'text-slate-400 hover:text-slate-200'
+                      }`}
+                    >
+                      🚪 Porta
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setCustomDoorType('window')}
+                      className={`py-1 px-2 rounded-lg text-xs font-bold transition-all ${
+                        selectedDoorWindow.type === 'window'
+                          ? 'bg-cyan-500 text-slate-950 shadow'
+                          : 'text-slate-400 hover:text-slate-200'
+                      }`}
+                    >
+                      🪟 Janela
+                    </button>
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">

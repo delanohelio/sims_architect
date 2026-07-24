@@ -72,19 +72,20 @@ O **Sims Architect** é uma aplicação web interativa de arquitetura e design d
   - Configuração de **Nome Customizado**, Categoria Específica, Sliders de **Largura ($W$)**, **Profundidade ($D$)** e **Altura ($H$)** ($0.3\text{m} \dots 5.0\text{m}$), **Formato 3D (Caixa / Cilindro)** e **Aparência (Cor ou Textura)**.
   - **Salvar no Catálogo**: Permite registrar o móvel customizado no catálogo local (com persistência no `localStorage`).
   - **Exibição Multicategoria com Badge Especial**: O móvel customizado salvo aparece tanto na aba **"Customizado"** quanto na aba da sua **categoria escolhida (ex: Sala, Quarto)**, com borda roxa brilhante e badge `★ Custom` em destaque.
-- **FASE 4: MODO EXPORTAR, PERSISTÊNCIA AUTOMÁTICA & COTAS MÉTRICAS**:
-  - **Auto-Save no Navegador (`Zustand Persist Middleware`)**:
-    - O progresso do usuário (estruturas e metadados do projeto) é salvo automaticamente no `localStorage` sob a chave `sims-architect-storage`.
-    - Salva `projectName`, `projectDescription`, `terrain`, `walls`, `floors`, `doorsWindows`, `items`, `customTextures` e `savedCustomFurniture`.
-  - **Identificação do Projeto (Nome & Descrição Opcional)**:
-    - Campos de texto na barra lateral do Modo Exportar ([ExportSidebar.tsx](file:///Users/delano/dev/sims-architect/src/components/layout/ExportSidebar.tsx)) para definir o **Nome do Projeto** (ex: "Mansão Villa Sims") e a **Descrição Opcional**.
-    - Integrados no cabeçalho dos arquivos `.json`, imagens `.png` e pranchas `.pdf`.
-  - **Cotas Métricas em Tempo Real e Exportação (Paredes, Esquadrias e Objetos)**:
-    - **Paredes**: Renderizam etiquetas com comprimento real em metros (ex: `4.50m`).
-    - **Esquadrias**: Renderizam cotas de largura e altura (ex: `0.90m × 2.10m`).
-    - **Móveis/Objetos**: Renderizam o nome e as dimensões de ocupação ($W \times D$, ex: `2.0m × 1.0m`).
-  - **Prancha A4 em PDF (`jsPDF`)**:
-    - Documento paisagem A4 com cabeçalho dark, nome do projeto em destaque, descrição formatada, estatísticas métricas e desenho com cotas centralizado sem distorções.
+- **Correção da Seleção de Cor Sólida para Pintura de Pisos (`useSimsStore.ts` & `BuildSidebar.tsx`)**:
+  - **Causa Raiz Identificada**: A action `setSelectedFloorTexture(textureId, color, customUrl)` ao ser chamada sem o 2º parâmetro (`color`) sobrescrevia a cor selecionada com `undefined`, resetando a cor da ferramenta de piso.
+  - **Resolução**: A action `setSelectedFloorTexture` foi corrigida na store para preservar a cor do estado quando não for explicitamente passada como `undefined`. Além disso, a chamada em `BuildSidebar.tsx` passa explicitamente a cor desejada `setSelectedFloorTexture('custom', color, undefined)`, garantindo que a cor sólida selecionada seja mantida ativa.
+  - **Feedback Visual de Cor Ativa**: Adicionado um card com amostra da cor ativa e o código Hexadecimal na lista de opções do catálogo de pisos quando uma cor sólida está pronta para pintar.
+- **Seleção Clara de Cor Sólida, Textura ou Modelo de Catálogo nos Pisos**:
+  - Organizada a barra de ferramentas de pisos em subseções distintas: **Cor Sólida** (qualquer Hexadecimal com paleta rápida), **Textura de Imagem** (Upload ou Link URL com galeria de texturas) e **Modelos Predefinidos do Catálogo** (Madeira Parquet, Mármore, Cerâmica, Slate, Grama, Terra).
+- **Seletor de Tipo para Esquadrias Genéricas (Porta vs Janela)**:
+  - Adicionado o seletor `[ 🚪 Porta ]` vs `[ 🪟 Janela ]` nas opções personalizadas da Esquadria Genérica em ([BuildSidebar.tsx](file:///Users/delano/dev/sims-architect/src/components/layout/BuildSidebar.tsx)).
+  - Ao alternar para **Porta**, aciona o posicionamento em 3 passos (Hinge/Swing) com giro de maçaneta; ao alternar para **Janela**, fixa diretamente o painel de vidro na parede.
+- **Aparência do Terreno em 3 Abas Mutuamente Exclusivas**:
+  - Organizado o painel em ([SettingsSidebar.tsx](file:///Users/delano/dev/sims-architect/src/components/layout/SettingsSidebar.tsx)) em 3 abas claras:
+    1. **Temas**: Presets rápidos de temas (Grama Sims, Blueprint Azul, Dark Slate, Concreto Urbano).
+    2. **2 Cores (Xadrez)**: Seleção independente de **Cor Primária** e **Cor Secundária** com presets de xadrez.
+    3. **Textura**: Aplicação de texturas de imagem enviadas ou em galeria.
 - **Navegação Orbital 3D Completa por Teclado**:
   - **WASD / Setas**: Pan/Strafe horizontal no terreno 3D.
   - **Q / E**: Rotação orbital horizontal da câmera (esquerda / direita).
