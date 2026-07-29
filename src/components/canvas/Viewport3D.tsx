@@ -19,7 +19,7 @@ export function Viewport3D() {
   const textureCacheRef = useRef<Map<string, THREE.Texture>>(new Map());
   const keysPressedRef = useRef<Record<string, boolean>>({});
 
-  const { terrain, walls, floors, doorsWindows, items, wallViewMode } = useSimsStore();
+  const { terrain, walls, floors, doorsWindows, items, annotations, wallViewMode } = useSimsStore();
 
   const failedTexturesRef = useRef<Set<string>>(new Set());
 
@@ -429,6 +429,31 @@ export function Viewport3D() {
       }
 
       scene.add(furnGroup);
+    });
+
+    // OVERLAY DE CHÃO 3D DAS MARCAÇÕES DE ÁREA (`annotations`)
+    annotations.forEach((ann) => {
+      if (!ann.points || ann.points.length < 3) return;
+
+      const shape = new THREE.Shape();
+      shape.moveTo(ann.points[0].x, ann.points[0].y);
+      for (let i = 1; i < ann.points.length; i++) {
+        shape.lineTo(ann.points[i].x, ann.points[i].y);
+      }
+      shape.closePath();
+
+      const shapeGeo = new THREE.ShapeGeometry(shape);
+      const shapeMat = new THREE.MeshBasicMaterial({
+        color: new THREE.Color(ann.color || '#10B981'),
+        transparent: true,
+        opacity: 0.25,
+        side: THREE.DoubleSide,
+      });
+
+      const zoneMesh = new THREE.Mesh(shapeGeo, shapeMat);
+      zoneMesh.rotation.x = Math.PI / 2;
+      zoneMesh.position.y = 0.02;
+      scene.add(zoneMesh);
     });
 
     // LOOP DE ANIMAÇÃO COM SUPORTE COMPLETO A TECLADO 3D (WASD/Setas, Q/E, Z/C, X)

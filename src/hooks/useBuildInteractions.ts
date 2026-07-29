@@ -78,12 +78,14 @@ export function useBuildInteractions() {
         setIsSpacePressed(true);
       }
 
-      if (e.code === 'KeyR' || e.key === 'r' || e.key === 'R') {
+      const store = useSimsStore.getState();
+      const kb = store.keybindings;
+
+      if (e.code === kb.rotateItem || e.key.toLowerCase() === kb.rotateItem.replace('Key', '').toLowerCase()) {
         rotatePendingFurnitureItem();
       }
 
-      if (e.code === 'KeyH' || e.key === 'h' || e.key === 'H' || e.code === 'Delete') {
-        // Atalho H (Hammer / Marreta): Ativa ferramenta de remoção / marreta
+      if (e.code === kb.hammer || e.key.toLowerCase() === kb.hammer.replace('Key', '').toLowerCase() || e.code === 'Delete') {
         setMode('build');
         setActiveBuildTool('eraser');
       }

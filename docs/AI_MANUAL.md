@@ -89,8 +89,8 @@ O JSON gerado deve seguir fielmente esta interface:
 ```json
 {
   "appName": "Sims Architect",
-  "version": "2.0",
-  "exportedAt": "2026-07-23T18:00:00.000Z",
+  "version": "2.5",
+  "exportedAt": "2026-07-29T18:00:00.000Z",
   "projectName": "Nome do Projeto Escolhido",
   "projectDescription": "Descrição sucinta da distribuição dos ambientes e área total.",
   "terrain": {
@@ -110,7 +110,8 @@ O JSON gerado deve seguir fielmente esta interface:
       "y2": 2,
       "colorSideA": "#E2E8F0",
       "textureUrlSideA": "/textures/wood.svg",
-      "colorSideB": "#CBD5E1"
+      "colorSideB": "#CBD5E1",
+      "labelOffset": { "x": 0, "y": -0.5 }
     }
   ],
   "floors": {
@@ -141,12 +142,37 @@ O JSON gerado deve seguir fielmente esta interface:
       "width": 2.0,
       "depth": 2.0,
       "height": 0.5,
-      "x": 4.5,
-      "y": 4.5,
-      "rotation": 0,
-      "color": "#3B82F6",
-      "textureUrl": "/textures/fabric_blue.svg",
-      "primitiveShape": "box"
+      "x": 5.0,
+      "y": 4.0,
+      "rotation": 90,
+      "color": "#3B82F6"
+    }
+  ],
+  "annotations": [
+    {
+      "id": "ann_1",
+      "type": "zone",
+      "name": "Suíte Master",
+      "lineStyle": "solid",
+      "color": "#10B981",
+      "points": [
+        { "x": 2, "y": 2 },
+        { "x": 8, "y": 2 },
+        { "x": 8, "y": 6 },
+        { "x": 2, "y": 6 }
+      ],
+      "labelPosition": { "x": 5, "y": 4 }
+    },
+    {
+      "id": "ann_txt_1",
+      "type": "text",
+      "name": "Entrada Principal",
+      "text": "Entrada Principal",
+      "lineStyle": "solid",
+      "color": "#38BDF8",
+      "fontSize": 16,
+      "points": [{ "x": 5, "y": 0.5 }],
+      "labelPosition": { "x": 5, "y": 0.5 }
     }
   ],
   "customTextures": [],

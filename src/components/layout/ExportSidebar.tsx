@@ -10,11 +10,15 @@ import {
   AlertTriangle,
   Sparkles,
   Layers,
-  FileSignature
+  FileSignature,
+  Printer,
+  Sliders
 } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import { useSimsStore } from '../../store/useSimsStore';
 import { exportPlanToDataUrl } from '../../utils/planExporter';
+import type { ExportQuality } from '../../types/sims';
+import { calculatePolygonArea } from '../../hooks/useAnnotationInteractions';
 
 export function ExportSidebar() {
   const { 
@@ -22,7 +26,8 @@ export function ExportSidebar() {
     walls, 
     floors, 
     doorsWindows, 
-    items, 
+    items,
+    annotations,
     projectName,
     projectDescription,
     setProjectName,
@@ -36,6 +41,10 @@ export function ExportSidebar() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+
+  // OPÇÕES DE CONFIGURAÇÃO DA EXPORTAÇÃO
+  const [exportQuality, setExportQuality] = useState<ExportQuality>('high');
+  const [useWhiteBackground, setUseWhiteBackground] = useState<boolean>(true);
 
   const showNotification = (type: 'success' | 'error', message: string) => {
     setFeedback({ type, message });
@@ -87,8 +96,8 @@ export function ExportSidebar() {
     e.target.value = '';
   };
 
-  // Obtém o DataURL seguro da planta baixa com Cotas Métricas (à prova de SecurityError / CORS)
-  const getSafePlanDataUrl = (): string => {
+  // Obtém o DataURL seguro da planta baixa com Cotas Métricas e Qualidade Escolhida
+  const getSafePlanDataUrl = (overrideQuality?: ExportQuality, overrideWhiteBg?: boolean): string => {
     setViewMode('2d');
     const domCanvas = (document.getElementById('sims-canvas-2d') as HTMLCanvasElement) || document.querySelector('canvas');
     return exportPlanToDataUrl(domCanvas, {
@@ -97,8 +106,11 @@ export function ExportSidebar() {
       floors,
       doorsWindows,
       items,
+      annotations,
       projectName,
       projectDescription,
+      quality: overrideQuality || exportQuality,
+      useWhiteBackground: overrideWhiteBg !== undefined ? overrideWhiteBg : useWhiteBackground,
     });
   };
 
@@ -109,23 +121,24 @@ export function ExportSidebar() {
       const link = document.createElement('a');
       link.href = dataUrl;
       const safeName = (projectName || 'planta-baixa').toLowerCase().replace(/[^a-z0-9]/g, '-');
-      link.download = `${safeName}-${terrain.width}x${terrain.length}m.png`;
+      const qSuffix = exportQuality === 'high' ? '4k' : exportQuality === 'low' ? 'sd' : 'hd';
+      link.download = `${safeName}-${terrain.width}x${terrain.length}m-${qSuffix}.png`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      showNotification('success', 'Planta baixa em PNG (com cotas métricas) exportada com sucesso!');
+      showNotification('success', `Planta baixa em PNG (${exportQuality.toUpperCase()}) exportada com sucesso!`);
     } catch (err) {
       console.error(err);
       showNotification('error', 'Erro ao gerar imagem PNG.');
     }
   };
 
-  // 4. EXPORTAR PLANTA BAIXA EM PDF (jsPDF)
+  // 4. EXPORTAR PDF MULTI-PÁGINAS (PÁG 1: PLANTA EM ALTA RESOLUÇÃO; PÁG 2+: MARCAÇÕES E RELATÓRIO DE MATERIAIS)
   const handleExportPDF = () => {
     try {
-      const imgData = getSafePlanDataUrl();
+      // Sempre gera com alta qualidade e fundo branco na primeira página do PDF para impressão
+      const imgData = getSafePlanDataUrl('high', true);
 
-      // Cria documento PDF A4 em Orientação Paisagem (Landscape)
       const pdf = new jsPDF({
         orientation: 'landscape',
         unit: 'mm',
@@ -135,58 +148,54 @@ export function ExportSidebar() {
       const pageWidth = 297;
       const pageHeight = 210;
 
-      // 1. Faixa de Cabeçalho Superior Elegante (Dark Theme)
-      const headerHeight = projectDescription.trim() ? 44 : 38;
-      pdf.setFillColor(15, 23, 42); // slate-900
+      // ==========================================
+      // PÁGINA 1: PLANTA BAIXA ARQUITETÔNICA HD
+      // ==========================================
+      const headerHeight = 36;
+
+      // Cabeçalho Fundo Limpo
+      pdf.setFillColor(248, 250, 252); // slate-50
       pdf.rect(0, 0, pageWidth, headerHeight, 'F');
-
-      // Linha decorativa verde esmeralda
       pdf.setFillColor(16, 185, 129); // emerald-500
-      pdf.rect(0, headerHeight - 2, pageWidth, 2, 'F');
+      pdf.rect(0, headerHeight - 1.5, pageWidth, 1.5, 'F');
 
-      // Título do Projeto (Nome Customizado)
       pdf.setFont('helvetica', 'bold');
       pdf.setFontSize(16);
-      pdf.setTextColor(255, 255, 255);
-      const displayTitle = projectName.trim() ? projectName : 'Sims Architect — Planta Baixa Arquitetônica';
+      pdf.setTextColor(15, 23, 42);
+      const displayTitle = projectName.trim() ? projectName : 'Sims Architect — Planta Baixa Executiva';
       pdf.text(displayTitle, 14, 14);
 
-      // Data e Hora de Geração
       const dateStr = new Date().toLocaleDateString('pt-BR', {
         day: '2-digit',
         month: '2-digit',
         year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
       });
       pdf.setFont('helvetica', 'normal');
       pdf.setFontSize(9);
-      pdf.setTextColor(148, 163, 184); // slate-400
-      pdf.text(`Gerado em: ${dateStr}`, pageWidth - 14, 14, { align: 'right' });
+      pdf.setTextColor(100, 116, 139);
+      pdf.text(`Data: ${dateStr} | Prancha 01/02`, pageWidth - 14, 14, { align: 'right' });
 
-      // Descrição Opcional do Projeto
       if (projectDescription.trim()) {
         pdf.setFont('helvetica', 'italic');
         pdf.setFontSize(9);
-        pdf.setTextColor(203, 213, 225); // slate-300
-        const truncatedDesc = projectDescription.length > 110 ? projectDescription.substring(0, 110) + '...' : projectDescription;
-        pdf.text(`Descrição: "${truncatedDesc}"`, 14, 23);
+        pdf.setTextColor(71, 85, 105);
+        pdf.text(projectDescription.substring(0, 110), 14, 22);
       }
 
-      // Subtítulo de Estatísticas e Métricas Dinâmicas do Projeto
       const totalArea = terrain.width * terrain.length;
-      const floorsCount = Object.keys(floors).length;
-      const statsText = `Métricas: Lote ${terrain.width}m × ${terrain.length}m | Área Total: ${totalArea}m² | Paredes: ${walls.length} | Pisos: ${floorsCount}m² | Esquadrias: ${doorsWindows.length} | Móveis: ${items.length}`;
-      
-      pdf.setFont('helvetica', 'normal');
+      pdf.setFont('helvetica', 'bold');
       pdf.setFontSize(9);
-      pdf.setTextColor(56, 189, 248); // sky-400
-      pdf.text(statsText, 14, headerHeight - 7);
+      pdf.setTextColor(14, 165, 233);
+      pdf.text(
+        `Lote: ${terrain.width}m × ${terrain.length}m (${totalArea} m²) | Paredes: ${walls.length} | Zonas Demarcadas: ${annotations.length}`,
+        14,
+        headerHeight - 6
+      );
 
-      // 2. Centralização da Imagem da Planta Baixa no PDF
+      // Imagem HD da Planta
       const imgProps = pdf.getImageProperties(imgData);
-      const maxImgWidth = 269; // Margens laterais de 14mm
-      const maxImgHeight = pageHeight - headerHeight - 20; // Margem vertical dinâmica
+      const maxImgWidth = 269;
+      const maxImgHeight = pageHeight - headerHeight - 18;
 
       let finalWidth = maxImgWidth;
       let finalHeight = (imgProps.height * maxImgWidth) / imgProps.width;
@@ -197,27 +206,152 @@ export function ExportSidebar() {
       }
 
       const xPos = (pageWidth - finalWidth) / 2;
-      const yPos = headerHeight + 4 + (maxImgHeight - finalHeight) / 2;
+      const yPos = headerHeight + 2 + (maxImgHeight - finalHeight) / 2;
 
-      // Moldura e Fundo Branco para o Desenho
-      pdf.setFillColor(255, 255, 255);
-      pdf.rect(xPos - 2, yPos - 2, finalWidth + 4, finalHeight + 4, 'F');
-      pdf.setDrawColor(226, 232, 240); // slate-200
-      pdf.rect(xPos - 2, yPos - 2, finalWidth + 4, finalHeight + 4, 'D');
-
-      // Desenha a imagem no PDF
       pdf.addImage(imgData, 'PNG', xPos, yPos, finalWidth, finalHeight);
 
-      // 3. Rodapé do Documento
+      // Rodapé Pág 1
       pdf.setFontSize(8);
       pdf.setTextColor(148, 163, 184);
-      pdf.text('Sims Architect 2D/3D Planner — Desenho Técnico com Cotas Métricas', 14, pageHeight - 6);
-      pdf.text('Página 1 de 1', pageWidth - 14, pageHeight - 6, { align: 'right' });
+      pdf.text('Sims Architect 2D/3D Planner — Desenho Técnico Arquitetônico', 14, pageHeight - 5);
+      pdf.text('Página 1 de 2', pageWidth - 14, pageHeight - 5, { align: 'right' });
 
-      // Salva o PDF com o nome seguro do projeto
+      // ==========================================
+      // PÁGINA 2: SUMÁRIO DE MARCAÇÕES & QUANTITATIVO DE MATERIAIS
+      // ==========================================
+      pdf.addPage('a4', 'landscape');
+
+      // Cabeçalho Pág 2
+      pdf.setFillColor(248, 250, 252);
+      pdf.rect(0, 0, pageWidth, 28, 'F');
+      pdf.setFillColor(14, 165, 233);
+      pdf.rect(0, 26.5, pageWidth, 1.5, 'F');
+
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(14);
+      pdf.setTextColor(15, 23, 42);
+      pdf.text('Relatório Executivo — Marcações de Ambientes & Quantitativo de Materiais', 14, 14);
+
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(9);
+      pdf.setTextColor(100, 116, 139);
+      pdf.text(`Projeto: ${projectName}`, pageWidth - 14, 14, { align: 'right' });
+
+      let currentY = 36;
+
+      // TABELA 1: MARCAÇÕES DE ÁREAS (ZONAS)
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(11);
+      pdf.setTextColor(16, 185, 129);
+      pdf.text('1. Sumário de Marcações de Ambientes e Áreas (m²)', 14, currentY);
+      currentY += 6;
+
+      pdf.setFillColor(241, 245, 249);
+      pdf.rect(14, currentY, 269, 7, 'F');
+      pdf.setFontSize(9);
+      pdf.setTextColor(51, 65, 85);
+      pdf.text('Nome do Ambiente / Zona', 18, currentY + 5);
+      pdf.text('Estilo do Contorno', 110, currentY + 5);
+      pdf.text('Cor', 180, currentY + 5);
+      pdf.text('Área Calculada (m²)', 240, currentY + 5);
+      currentY += 8;
+
+      let totalZonesArea = 0;
+      if (annotations.length === 0) {
+        pdf.setFont('helvetica', 'italic');
+        pdf.setFontSize(9);
+        pdf.setTextColor(148, 163, 184);
+        pdf.text('Nenhuma marcação de ambiente cadastrada no projeto.', 18, currentY + 4);
+        currentY += 10;
+      } else {
+        annotations.forEach((ann) => {
+          const areaM2 = calculatePolygonArea(ann.points);
+          totalZonesArea += areaM2;
+
+          pdf.setFont('helvetica', 'normal');
+          pdf.setFontSize(9);
+          pdf.setTextColor(30, 41, 59);
+          pdf.text(ann.name, 18, currentY + 4);
+          pdf.text(ann.lineStyle === 'solid' ? 'Contínua' : ann.lineStyle === 'dashed' ? 'Pontilhada' : 'Invisível', 110, currentY + 4);
+          pdf.text(ann.color, 180, currentY + 4);
+          pdf.setFont('helvetica', 'bold');
+          pdf.text(`${areaM2.toFixed(2)} m²`, 240, currentY + 4);
+
+          pdf.setDrawColor(241, 245, 249);
+          pdf.line(14, currentY + 6, 283, currentY + 6);
+          currentY += 7;
+        });
+
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(9);
+        pdf.setTextColor(16, 185, 129);
+        pdf.text(`Total Demarcado: ${totalZonesArea.toFixed(2)} m² (${((totalZonesArea / totalArea) * 100).toFixed(1)}% do lote)`, 240, currentY + 4);
+        currentY += 12;
+      }
+
+      // TABELA 2: QUANTITATIVO DE ESTRUTURAS & MATERIAIS
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(11);
+      pdf.setTextColor(14, 165, 233);
+      pdf.text('2. Relatório Quantitativo de Estruturas & Esquadrias', 14, currentY);
+      currentY += 6;
+
+      // Cálculo de Metros Lineares de Parede
+      let totalWallMeters = 0;
+      walls.forEach((w) => {
+        totalWallMeters += Math.hypot(w.x2 - w.x1, w.y2 - w.y1);
+      });
+
+      // Contagem de Esquadrias
+      let doorsCount = 0;
+      let slidingDoorsCount = 0;
+      let windowsCount = 0;
+      doorsWindows.forEach((dw) => {
+        if (dw.isSliding || dw.catalogId === 'door_sliding') slidingDoorsCount++;
+        else if (dw.type === 'door') doorsCount++;
+        else windowsCount++;
+      });
+
+      pdf.setFillColor(241, 245, 249);
+      pdf.rect(14, currentY, 269, 7, 'F');
+      pdf.setFontSize(9);
+      pdf.setTextColor(51, 65, 85);
+      pdf.text('Elemento Construtivo', 18, currentY + 5);
+      pdf.text('Quantidade / Extensão Total', 180, currentY + 5);
+      currentY += 8;
+
+      const structRows = [
+        { name: 'Paredes Estruturais (Comprimento Total)', val: `${totalWallMeters.toFixed(2)} metros lineares` },
+        { name: 'Área Total de Pisos Pintados no Lote', val: `${Object.keys(floors).length} m²` },
+        { name: 'Portas Simples / Duplas com Dobradiça', val: `${doorsCount} unidade(s)` },
+        { name: 'Portas de Correr Especiais (Sem Dobradiça)', val: `${slidingDoorsCount} unidade(s)` },
+        { name: 'Janelas e Aberturas Panorâmicas', val: `${windowsCount} unidade(s)` },
+        { name: 'Mobiliário e Objetos Colocados', val: `${items.length} item(ns)` },
+      ];
+
+      structRows.forEach((row) => {
+        pdf.setFont('helvetica', 'normal');
+        pdf.setFontSize(9);
+        pdf.setTextColor(30, 41, 59);
+        pdf.text(row.name, 18, currentY + 4);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text(row.val, 180, currentY + 4);
+
+        pdf.setDrawColor(241, 245, 249);
+        pdf.line(14, currentY + 6, 283, currentY + 6);
+        currentY += 7;
+      });
+
+      // Rodapé Pág 2
+      pdf.setFontSize(8);
+      pdf.setTextColor(148, 163, 184);
+      pdf.text('Sims Architect 2D/3D Planner — Relatório Executivo de Quantitativos', 14, pageHeight - 5);
+      pdf.text('Página 2 de 2', pageWidth - 14, pageHeight - 5, { align: 'right' });
+
+      // Salva o PDF
       const safeName = (projectName || 'projeto-arquitetonico').toLowerCase().replace(/[^a-z0-9]/g, '-');
       pdf.save(`${safeName}-${terrain.width}x${terrain.length}m.pdf`);
-      showNotification('success', 'Documento PDF com cotas e cabeçalho gerado com sucesso!');
+      showNotification('success', 'Documento PDF de 2 páginas (Planta HD + Relatório) gerado com sucesso!');
     } catch (err) {
       console.error(err);
       showNotification('error', 'Erro ao gerar documento PDF.');
@@ -232,7 +366,6 @@ export function ExportSidebar() {
   };
 
   const totalArea = terrain.width * terrain.length;
-  const paintedFloors = Object.keys(floors).length;
 
   return (
     <aside className="w-88 bg-slate-900/95 backdrop-blur-xl border-r border-slate-800/80 flex flex-col h-[calc(100vh-4rem)] z-20 shadow-2xl select-none overflow-y-auto custom-scrollbar">
@@ -253,7 +386,7 @@ export function ExportSidebar() {
           </div>
           <div>
             <h2 className="text-sm font-bold text-white tracking-wide">Modo Exportar & Salvar</h2>
-            <p className="text-[11px] text-slate-400">Gerencie detalhes, arquivos e exportações com cotas</p>
+            <p className="text-[11px] text-slate-400">Exporte imagens HD, PDF multi-páginas e relatórios</p>
           </div>
         </div>
       </div>
@@ -277,7 +410,7 @@ export function ExportSidebar() {
           </div>
         )}
 
-        {/* IDENTIFICAÇÃO DO PROJETO (NOME & DESCRIÇÃO OPÇÕES) */}
+        {/* IDENTIFICAÇÃO DO PROJETO */}
         <div className="space-y-3">
           <label className="text-xs font-bold text-white flex items-center gap-2">
             <FileSignature className="w-4 h-4 text-cyan-400" />
@@ -293,7 +426,7 @@ export function ExportSidebar() {
                 type="text"
                 value={projectName}
                 onChange={(e) => setProjectName(e.target.value)}
-                placeholder="Ex: Residência Villa Sims, Casa de Praia..."
+                placeholder="Ex: Residência Villa Sims..."
                 className="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3 py-1.5 text-xs text-white placeholder-slate-500 outline-none focus:border-cyan-500 transition-all font-medium"
               />
             </div>
@@ -306,48 +439,118 @@ export function ExportSidebar() {
                 value={projectDescription}
                 onChange={(e) => setProjectDescription(e.target.value)}
                 rows={2}
-                placeholder="Ex: Sobrado moderno de 2 pavimentos com área gourmet integrando sala..."
+                placeholder="Ex: Sobrado moderno com área gourmet integrando sala..."
                 className="w-full bg-slate-900 border border-slate-700/80 rounded-xl p-2.5 text-xs text-white placeholder-slate-500 outline-none focus:border-cyan-500 transition-all resize-none font-normal"
               />
             </div>
           </div>
         </div>
 
-        {/* RESUMO DAS MÉTRICAS DO PROJETO ATUAL */}
+        {/* CONFIGURAÇÃO DE QUALIDADE DE EXPORTAÇÃO */}
         <div className="space-y-3">
           <label className="text-xs font-bold text-white flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-amber-400" />
-            <span>Métricas do Projeto Atual</span>
+            <Sliders className="w-4 h-4 text-emerald-400" />
+            <span>Qualidade da Imagem e Impressão</span>
           </label>
 
-          <div className="grid grid-cols-2 gap-2">
-            <div className="p-3 bg-slate-950/60 rounded-2xl border border-slate-800 text-xs">
-              <span className="text-[10px] text-slate-400 block font-semibold">Dimensão do Lote</span>
-              <strong className="text-white text-sm font-mono">{terrain.width}m × {terrain.length}m</strong>
+          <div className="space-y-3 bg-slate-950/60 p-3.5 rounded-2xl border border-slate-800 text-xs">
+            <div>
+              <span className="text-[11px] text-slate-300 font-semibold block mb-1.5">
+                Resolução da Imagem:
+              </span>
+              <div className="grid grid-cols-3 gap-1.5">
+                <button
+                  onClick={() => setExportQuality('high')}
+                  className={`py-1.5 px-2 rounded-xl text-[11px] font-bold border transition-all ${
+                    exportQuality === 'high'
+                      ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500'
+                      : 'bg-slate-900 text-slate-400 border-slate-800 hover:bg-slate-800'
+                  }`}
+                >
+                  🖨️ Alta (4K)
+                </button>
+                <button
+                  onClick={() => setExportQuality('medium')}
+                  className={`py-1.5 px-2 rounded-xl text-[11px] font-bold border transition-all ${
+                    exportQuality === 'medium'
+                      ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500'
+                      : 'bg-slate-900 text-slate-400 border-slate-800 hover:bg-slate-800'
+                  }`}
+                >
+                  📱 Média (HD)
+                </button>
+                <button
+                  onClick={() => setExportQuality('low')}
+                  className={`py-1.5 px-2 rounded-xl text-[11px] font-bold border transition-all ${
+                    exportQuality === 'low'
+                      ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500'
+                      : 'bg-slate-900 text-slate-400 border-slate-800 hover:bg-slate-800'
+                  }`}
+                >
+                  ⚡ Baixa (SD)
+                </button>
+              </div>
             </div>
 
-            <div className="p-3 bg-slate-950/60 rounded-2xl border border-slate-800 text-xs">
-              <span className="text-[10px] text-slate-400 block font-semibold">Área Total</span>
-              <strong className="text-emerald-400 text-sm font-mono">{totalArea} m²</strong>
-            </div>
-
-            <div className="p-3 bg-slate-950/60 rounded-2xl border border-slate-800 text-xs">
-              <span className="text-[10px] text-slate-400 block font-semibold">Paredes / Esquadrias</span>
-              <strong className="text-cyan-400 text-sm font-mono">{walls.length} p / {doorsWindows.length} esq</strong>
-            </div>
-
-            <div className="p-3 bg-slate-950/60 rounded-2xl border border-slate-800 text-xs">
-              <span className="text-[10px] text-slate-400 block font-semibold">Pisos / Móveis</span>
-              <strong className="text-purple-400 text-sm font-mono">{paintedFloors}m² / {items.length} móv</strong>
+            <div className="pt-2 border-t border-slate-800 space-y-1.5">
+              <span className="text-[11px] text-slate-300 font-semibold block">
+                Estilo do Fundo da Exportação:
+              </span>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setUseWhiteBackground(false)}
+                  className={`py-2 px-2 rounded-xl text-[11px] font-bold border flex items-center justify-center gap-1.5 transition-all ${
+                    !useWhiteBackground
+                      ? 'bg-teal-500/20 text-teal-300 border-teal-500 shadow-sm'
+                      : 'bg-slate-900 text-slate-400 border-slate-800 hover:bg-slate-800'
+                  }`}
+                >
+                  <Layers className="w-3.5 h-3.5 text-teal-400" />
+                  <span>Fundo Tema ({terrain.theme})</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setUseWhiteBackground(true)}
+                  className={`py-2 px-2 rounded-xl text-[11px] font-bold border flex items-center justify-center gap-1.5 transition-all ${
+                    useWhiteBackground
+                      ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500 shadow-sm'
+                      : 'bg-slate-900 text-slate-400 border-slate-800 hover:bg-slate-800'
+                  }`}
+                >
+                  <Printer className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>Fundo Branco (Prancha)</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* 5 BOTÕES DE AÇÃO PRINCIPAIS COM COTAS E PROJETO */}
+        {/* RESUMO DAS MÉTRICAS */}
+        <div className="space-y-3">
+          <label className="text-xs font-bold text-white flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-amber-400" />
+            <span>Métricas do Projeto</span>
+          </label>
+
+          <div className="grid grid-cols-2 gap-2">
+            <div className="p-3 bg-slate-950/60 rounded-2xl border border-slate-800 text-xs">
+              <span className="text-[10px] text-slate-400 block font-semibold">Lote & Área</span>
+              <strong className="text-white text-sm font-mono">{terrain.width}x{terrain.length}m ({totalArea}m²)</strong>
+            </div>
+
+            <div className="p-3 bg-slate-950/60 rounded-2xl border border-slate-800 text-xs">
+              <span className="text-[10px] text-slate-400 block font-semibold">Zonas Demarcadas</span>
+              <strong className="text-teal-400 text-sm font-mono">{annotations.length} zonas</strong>
+            </div>
+          </div>
+        </div>
+
+        {/* BOTÕES DE EXPORTAÇÃO */}
         <div className="space-y-3">
           <label className="text-xs font-bold text-white flex items-center gap-2">
             <Layers className="w-4 h-4 text-cyan-400" />
-            <span>Ações de Exportação com Cotas Métricas</span>
+            <span>Ações de Exportação</span>
           </label>
 
           <div className="space-y-2.5">
@@ -362,7 +565,7 @@ export function ExportSidebar() {
                 </div>
                 <div className="text-left">
                   <div className="text-white font-bold">1. Salvar Projeto (.json)</div>
-                  <div className="text-[10px] text-slate-400 font-normal">Baixa arquivo de backup completo</div>
+                  <div className="text-[10px] text-slate-400 font-normal">Backup completo com zonas e atalhos</div>
                 </div>
               </div>
               <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-1 rounded border border-emerald-500/20">.JSON</span>
@@ -385,7 +588,7 @@ export function ExportSidebar() {
               <span className="text-[10px] font-mono text-cyan-400 bg-cyan-500/10 px-2 py-1 rounded border border-cyan-500/20">Abrir</span>
             </button>
 
-            {/* 3. 🖼️ EXPORTAR PLANTA (PNG COM COTAS) */}
+            {/* 3. 🖼️ EXPORTAR PLANTA (PNG EM ALTA QUALIDADE) */}
             <button
               onClick={handleExportPNG}
               className="w-full p-3.5 rounded-2xl bg-gradient-to-r from-purple-600/20 to-pink-600/20 hover:from-purple-600/30 hover:to-pink-600/30 text-purple-300 border border-purple-500/30 font-semibold text-xs flex items-center justify-between transition-all group shadow-md"
@@ -395,14 +598,14 @@ export function ExportSidebar() {
                   <ImageIcon className="w-4 h-4" />
                 </div>
                 <div className="text-left">
-                  <div className="text-white font-bold">3. Exportar Planta (PNG com Cotas)</div>
-                  <div className="text-[10px] text-slate-400 font-normal">Imagem HD com dimensões e nome</div>
+                  <div className="text-white font-bold">3. Exportar Imagem PNG ({exportQuality.toUpperCase()})</div>
+                  <div className="text-[10px] text-slate-400 font-normal">Imagem de alta definição com cotas</div>
                 </div>
               </div>
               <span className="text-[10px] font-mono text-purple-400 bg-purple-500/10 px-2 py-1 rounded border border-purple-500/20">.PNG</span>
             </button>
 
-            {/* 4. 📄 EXPORTAR PLANTA (PDF COM COTAS & DETALHES) */}
+            {/* 4. 📄 EXPORTAR PDF MULTI-PÁGINAS (PLANTA + MARCAÇÕES & MATERIAIS) */}
             <button
               onClick={handleExportPDF}
               className="w-full p-3.5 rounded-2xl bg-gradient-to-r from-amber-600/20 to-orange-600/20 hover:from-amber-600/30 hover:to-orange-600/30 text-amber-300 border border-amber-500/30 font-semibold text-xs flex items-center justify-between transition-all group shadow-md"
@@ -412,14 +615,14 @@ export function ExportSidebar() {
                   <FileText className="w-4 h-4" />
                 </div>
                 <div className="text-left">
-                  <div className="text-white font-bold">4. Exportar Planta (PDF com Cotas)</div>
-                  <div className="text-[10px] text-slate-400 font-normal">Prancha A4 com título e cotas métricas</div>
+                  <div className="text-white font-bold">4. Exportar PDF Multi-Páginas (Prancha + Relatório)</div>
+                  <div className="text-[10px] text-slate-400 font-normal">Pág 1: Planta HD; Pág 2+: Sumário & Materiais</div>
                 </div>
               </div>
               <span className="text-[10px] font-mono text-amber-400 bg-amber-500/10 px-2 py-1 rounded border border-amber-500/20">.PDF</span>
             </button>
 
-            {/* 5. 🗑️ NOVO PROJETO (LIMPAR TUDO) */}
+            {/* 5. 🗑️ NOVO PROJETO */}
             {!showResetConfirm ? (
               <button
                 onClick={() => setShowResetConfirm(true)}
@@ -460,7 +663,7 @@ export function ExportSidebar() {
             <span>Persistência Automática Ativa</span>
           </div>
           <p className="text-[11px] text-slate-400 leading-relaxed">
-            Nome do projeto, descrição e estruturas são salvos automaticamente no navegador (<code className="text-emerald-400 font-mono">sims-architect-storage</code>).
+            Nome do projeto, zonas de marcação e atalhos customizados são salvos automaticamente no navegador (<code className="text-emerald-400 font-mono">sims-architect-storage</code>).
           </p>
         </div>
       </div>

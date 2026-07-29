@@ -1,6 +1,7 @@
 import { useSimsStore } from '../../store/useSimsStore';
 import { BuildSidebar } from './BuildSidebar';
 import { BuySidebar } from './BuySidebar';
+import { AnnotationSidebar } from './AnnotationSidebar';
 import { ExportSidebar } from './ExportSidebar';
 import { Inspection3DSidebar } from './Inspection3DSidebar';
 import { SettingsSidebar } from './SettingsSidebar';
@@ -21,6 +22,11 @@ export function Sidebar() {
   // Se estiver no Modo 2D e no modo Compra, exibe a Sidebar do Modo Compra
   if (activeMode === 'buy') {
     return <BuySidebar />;
+  }
+
+  // Se estiver no Modo Marcação, exibe a Sidebar de Marcação de Áreas
+  if (activeMode === 'annotation') {
+    return <AnnotationSidebar />;
   }
 
   // Se estiver no Modo Exportar, exibe a Sidebar do Modo Exportar

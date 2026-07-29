@@ -5,6 +5,7 @@ import type {
   ViewMode3D,
   TerrainTheme,
   BuildTool,
+  AnnotationTool,
   WallViewMode,
   FloorTextureId,
   TerrainConfig,
@@ -19,6 +20,10 @@ import type {
   FurnitureCatalogItem,
   FurnitureCategory,
   CustomTextureItem,
+  ShortcutAction,
+  AnnotationLineStyle,
+  ZoneAnnotation,
+  Point2D,
 } from '../types/sims';
 
 export const PRESET_LOTS = [
@@ -27,6 +32,17 @@ export const PRESET_LOTS = [
   { name: 'Quadrado / Chalé', width: 20, length: 20, description: '20m x 20m (400m²)' },
   { name: 'Mansão / Lote Grande', width: 25, length: 40, description: '25m x 40m (1000m²)' },
 ];
+
+export const DEFAULT_KEYBINDINGS: Record<ShortcutAction, string> = {
+  zoomIn: 'KeyZ',
+  zoomOut: 'KeyC',
+  zoomReset: 'KeyX',
+  rotateCCW: 'KeyQ',
+  rotateCW: 'KeyE',
+  rotateItem: 'KeyR',
+  hammer: 'KeyH',
+  toggleGrid: 'KeyG',
+};
 
 export const CATALOG_FURNITURE: FurnitureCatalogItem[] = [
   // QUARTO
@@ -76,11 +92,9 @@ export const CATALOG_FURNITURE: FurnitureCatalogItem[] = [
 
 export interface PendingFurniturePlacement {
   catalogItem: FurnitureCatalogItem;
-  rotation: number; // 0, 90, 180, 270
+  rotation: number;
   movingItemId?: string;
 }
-
-
 
 export interface PendingDoorPlacement {
   step: 'hinge' | 'swing';
@@ -116,6 +130,32 @@ interface SimsState {
   wallViewMode: WallViewMode;
   isSetupModalOpen: boolean;
   
+  // ATALHOS CUSTOMIZÁVEIS
+  keybindings: Record<ShortcutAction, string>;
+  setKeybinding: (action: ShortcutAction, key: string) => void;
+  resetKeybindings: () => void;
+
+  // NOVO MENU: MARCAÇÕES / ZONAS E TEXTOS LIVRES
+  annotations: ZoneAnnotation[];
+  activeAnnotationTool: AnnotationTool;
+  selectedAnnotationId: string | null;
+  customAnnotationColor: string;
+  customAnnotationLineStyle: AnnotationLineStyle;
+  customTextContent: string;
+  customTextFontSize: number;
+  setActiveAnnotationTool: (tool: AnnotationTool) => void;
+  setSelectedAnnotationId: (id: string | null) => void;
+  setCustomAnnotationColor: (color: string) => void;
+  setCustomAnnotationLineStyle: (style: AnnotationLineStyle) => void;
+  setCustomTextContent: (text: string) => void;
+  setCustomTextFontSize: (size: number) => void;
+  addAnnotation: (annotation: Omit<ZoneAnnotation, 'id'>) => void;
+  updateAnnotation: (id: string, partial: Partial<ZoneAnnotation>) => void;
+  removeAnnotation: (id: string) => void;
+  clearAnnotations: () => void;
+  setAnnotationLabelPosition: (id: string, position: Point2D) => void;
+  setWallLabelOffset: (wallId: string, offset: Point2D) => void;
+
   customTextures: CustomTextureItem[];
 
   selectedWallColor: string;
@@ -143,29 +183,34 @@ interface SimsState {
   customFurnitureCategory: FurnitureCategory;
   customFurnitureShape: 'box' | 'cylinder';
 
+  // METADADOS DO PROJETO (FASE 4)
   projectName: string;
   projectDescription: string;
-  setProjectName: (name: string) => void;
-  setProjectDescription: (description: string) => void;
-  setProjectDetails: (name: string, description?: string) => void;
 
+  // CATÁLOGOS CUSTOMIZADOS PERSISTIDOS
+  savedCustomFurniture: FurnitureCatalogItem[];
+
+  // ESTRUTURAS ARQUITETÔNICAS DO LOTE
   walls: Wall[];
   floors: Record<string, FloorTile>;
   doorsWindows: DoorWindow[];
   items: FurnitureItem[];
 
+  // ACTIONS
   setMode: (mode: AppMode) => void;
-  setViewMode: (viewMode: ViewMode3D) => void;
-  setWallViewMode: (mode: WallViewMode) => void;
+  setViewMode: (mode: ViewMode3D) => void;
   setActiveBuildTool: (tool: BuildTool) => void;
-  setSetupModalOpen: (open: boolean) => void;
-  
-  savedCustomFurniture: FurnitureCatalogItem[];
-  addCustomCatalogItem: (item: FurnitureCatalogItem) => void;
-  removeCustomCatalogItem: (catalogId: string) => void;
+  setWallViewMode: (mode: WallViewMode) => void;
+  setIsSetupModalOpen: (open: boolean) => void;
+
+  setProjectName: (name: string) => void;
+  setProjectDescription: (desc: string) => void;
 
   addCustomTexture: (name: string, url: string) => void;
   removeCustomTexture: (id: string) => void;
+
+  addCustomCatalogItem: (item: Omit<FurnitureCatalogItem, 'isCustom'>) => void;
+  removeCustomCatalogItem: (catalogId: string) => void;
 
   setSelectedWallColor: (color: string) => void;
   setSelectedWallTexture: (url?: string) => void;
@@ -183,7 +228,6 @@ interface SimsState {
   cancelPendingDoor: () => void;
   toggleDoorFlip: (dwId?: string) => void;
 
-  // FASE 3: MODO COMPRA ACTIONS
   setSelectedBuyCategory: (category: FurnitureCategory) => void;
   setPendingFurnitureItem: (pending: PendingFurniturePlacement | null) => void;
   rotatePendingFurnitureItem: () => void;
@@ -262,14 +306,14 @@ const DEFAULT_TERRAIN: TerrainConfig = {
 
 const DEFAULT_VIEWSTATE: ViewState = {
   zoom: 1.0,
-  panX: 200,
-  panY: 80,
+  panX: 0,
+  panY: 0,
   rotation: 0,
 };
 
 const DEFAULT_GRIDSETTINGS: GridSettings = {
   showGrid: true,
-  showSubgrid: true,
+  showSubgrid: false,
   showMeters: true,
   snapToGrid: true,
 };
@@ -277,570 +321,537 @@ const DEFAULT_GRIDSETTINGS: GridSettings = {
 export const useSimsStore = create<SimsState>()(
   persist(
     (set, get) => ({
-      projectName: 'Meu Projeto Sims',
-      projectDescription: '',
-      setProjectName: (name) => set({ projectName: name }),
-      projectDescriptionSet: (desc: string) => set({ projectDescription: desc }),
-      setProjectDescription: (desc) => set({ projectDescription: desc }),
-      setProjectDetails: (name, description = '') => set({ projectName: name, projectDescription: description }),
-
       activeMode: 'settings',
       viewMode: '2d',
       terrain: DEFAULT_TERRAIN,
-  viewState: DEFAULT_VIEWSTATE,
-  gridSettings: DEFAULT_GRIDSETTINGS,
-  cursorPos: {
-    x: null,
-    y: null,
-    gridX: null,
-    gridY: null,
-    snapVertexX: null,
-    snapVertexY: null,
-    isInsideTerrain: false,
-  },
-  activeBuildTool: 'wall',
-  wallViewMode: 'full',
-  isSetupModalOpen: false,
-
-  customTextures: [
-    { id: 'tex_wood_warm', name: 'Madeira Nobre', url: '/textures/wood.svg' },
-    { id: 'tex_brick_red', name: 'Tijolo Aparente', url: '/textures/brick_red.svg' },
-    { id: 'tex_marble_white', name: 'Mármore Carrara', url: '/textures/marble.svg' },
-    { id: 'tex_tile_blue', name: 'Azulejo Hidráulico', url: '/textures/tile_blue.svg' },
-  ],
-
-  selectedWallColor: '#E2E8F0',
-  selectedWallTexture: undefined,
-
-  selectedFloorTexture: 'wood',
-  selectedFloorColor: '#78350F',
-  selectedFloorCustomTexture: undefined,
-
-  selectedDoorWindow: CATALOG_DOORS_WINDOWS[0],
-  customDoorWidth: 1.0,
-  customDoorHeight: 2.1,
-  customDoorFrameColor: '#F59E0B',
-  pendingDoor: null,
-
-  // FASE 3 MODO COMPRA DEFAULT STATE
-  selectedBuyCategory: 'bedroom',
-  pendingFurnitureItem: null,
-  customFurnitureName: 'Móvel Genérico Custom',
-  customFurnitureWidth: 1.5,
-  customFurnitureDepth: 0.8,
-  customFurnitureHeight: 0.9,
-  customFurnitureColor: '#3B82F6',
-  customFurnitureTextureUrl: undefined,
-  customFurnitureCategory: 'living',
-  customFurnitureShape: 'box',
-
-  walls: [],
-  floors: {},
-  doorsWindows: [],
-  items: [],
-
-  setMode: (mode) => {
-    get().cancelPendingDoor();
-    get().cancelPendingFurnitureItem();
-    set({ activeMode: mode });
-  },
-
-  setViewMode: (viewMode) => {
-    get().cancelPendingDoor();
-    get().cancelPendingFurnitureItem();
-    if (viewMode === '2d') {
-      get().resetRotation();
-      get().centerView();
-    }
-    set({ viewMode });
-  },
-
-  setWallViewMode: (wallViewMode) => set({ wallViewMode }),
-
-  setActiveBuildTool: (tool) => {
-    get().cancelPendingDoor();
-    get().cancelPendingFurnitureItem();
-    set({ activeBuildTool: tool });
-  },
-
-  setSetupModalOpen: (open) => set({ isSetupModalOpen: open }),
-
-  savedCustomFurniture: (() => {
-    try {
-      const data = localStorage.getItem('sims_saved_furniture');
-      return data ? JSON.parse(data) : [];
-    } catch {
-      return [];
-    }
-  })(),
-
-  addCustomCatalogItem: (item) => {
-    set((state) => {
-      const updated = [...state.savedCustomFurniture.filter((i) => i.catalogId !== item.catalogId), item];
-      try {
-        localStorage.setItem('sims_saved_furniture', JSON.stringify(updated));
-      } catch {}
-      return { savedCustomFurniture: updated };
-    });
-  },
-
-  removeCustomCatalogItem: (catalogId) => {
-    set((state) => {
-      const updated = state.savedCustomFurniture.filter((i) => i.catalogId !== catalogId);
-      try {
-        localStorage.setItem('sims_saved_furniture', JSON.stringify(updated));
-      } catch {}
-      return { savedCustomFurniture: updated };
-    });
-  },
-
-  addCustomTexture: (name, url) => {
-    const newTex: CustomTextureItem = {
-      id: `tex_${Date.now()}`,
-      name: name.trim() || 'Textura Customizada',
-      url,
-    };
-    set((state) => {
-      const updated = [...state.customTextures, newTex];
-      try {
-        localStorage.setItem('sims_custom_textures', JSON.stringify(updated));
-      } catch {}
-      return { customTextures: updated };
-    });
-  },
-
-  removeCustomTexture: (id) => {
-    const targetTex = get().customTextures.find((t) => t.id === id);
-    if (!targetTex) return;
-
-    set((state) => {
-      const updatedTextures = state.customTextures.filter((t) => t.id !== id);
-
-      const updatedWalls = state.walls.map((w) => {
-        let sideAUrl = w.textureUrlSideA;
-        let sideBUrl = w.textureUrlSideB;
-        let sideAColor = w.colorSideA;
-        let sideBColor = w.colorSideB;
-
-        if (sideAUrl === targetTex.url) {
-          sideAUrl = undefined;
-          if (!sideAColor) sideAColor = '#E2E8F0';
-        }
-        if (sideBUrl === targetTex.url) {
-          sideBUrl = undefined;
-          if (!sideBColor) sideBColor = '#CBD5E1';
-        }
-
-        return { ...w, textureUrlSideA: sideAUrl, textureUrlSideB: sideBUrl, colorSideA: sideAColor, colorSideB: sideBColor };
-      });
-
-      const updatedFloors: Record<string, FloorTile> = {};
-      Object.entries(state.floors).forEach(([key, tile]) => {
-        if (tile.customTextureUrl === targetTex.url) {
-          updatedFloors[key] = { ...tile, customTextureUrl: undefined, color: tile.color || '#78350F' };
-        } else {
-          updatedFloors[key] = tile;
-        }
-      });
-
-      let updatedTerrainUrl = state.terrain.customTextureUrl;
-      if (updatedTerrainUrl === targetTex.url) {
-        updatedTerrainUrl = undefined;
-      }
-
-      let selWallTex = state.selectedWallTexture;
-      if (selWallTex === targetTex.url) selWallTex = undefined;
-
-      let selFloorCustom = state.selectedFloorCustomTexture;
-      if (selFloorCustom === targetTex.url) selFloorCustom = undefined;
-
-      return {
-        customTextures: updatedTextures,
-        walls: updatedWalls,
-        floors: updatedFloors,
-        terrain: { ...state.terrain, customTextureUrl: updatedTerrainUrl },
-        selectedWallTexture: selWallTex,
-        selectedFloorCustomTexture: selFloorCustom,
-      };
-    });
-  },
-
-  setSelectedWallColor: (color) => set({ selectedWallColor: color }),
-  setSelectedWallTexture: (url) => set({ selectedWallTexture: url }),
-
-  setSelectedFloorTexture: (textureId, color, customUrl) =>
-    set((state) => ({
-      selectedFloorTexture: textureId,
-      selectedFloorColor: color !== undefined ? color : (textureId === 'custom' ? state.selectedFloorColor : undefined),
-      selectedFloorCustomTexture: customUrl,
-    })),
-
-  setSelectedFloorColor: (color) => set({ selectedFloorColor: color }),
-  setSelectedFloorCustomTexture: (url) => set({ selectedFloorCustomTexture: url }),
-
-  setSelectedDoorWindow: (item) => {
-    get().cancelPendingDoor();
-    set({ selectedDoorWindow: item });
-  },
-
-  setCustomDoorType: (type) =>
-    set((state) => ({
-      selectedDoorWindow: {
-        ...state.selectedDoorWindow,
-        type,
-        name: type === 'door' ? 'Porta Customizada' : 'Janela Customizada',
+      viewState: DEFAULT_VIEWSTATE,
+      gridSettings: DEFAULT_GRIDSETTINGS,
+      cursorPos: {
+        x: null,
+        y: null,
+        gridX: null,
+        gridY: null,
+        snapVertexX: null,
+        snapVertexY: null,
+        isInsideTerrain: false,
       },
-    })),
+      activeBuildTool: 'wall',
+      wallViewMode: 'full',
+      isSetupModalOpen: false,
 
-  setCustomDoorWidth: (width) => set({ customDoorWidth: width }),
-  setCustomDoorHeight: (height) => set({ customDoorHeight: height }),
-  setCustomDoorFrameColor: (color) => set({ customDoorFrameColor: color }),
-  setPendingDoor: (pending) => set({ pendingDoor: pending }),
-  cancelPendingDoor: () => set({ pendingDoor: null }),
-  toggleDoorFlip: () => {},
+      // ATALHOS CUSTOMIZÁVEIS
+      keybindings: DEFAULT_KEYBINDINGS,
+      setKeybinding: (action, key) =>
+        set((state) => ({
+          keybindings: { ...state.keybindings, [action]: key },
+        })),
+      resetKeybindings: () => set({ keybindings: DEFAULT_KEYBINDINGS }),
 
-  // FASE 3 MODO COMPRA ACTIONS
-  setSelectedBuyCategory: (category) => set({ selectedBuyCategory: category }),
+      // MARCAÇÕES DE ÁREA / ZONAS E TEXTOS LIVRES
+      annotations: [],
+      activeAnnotationTool: 'draw',
+      selectedAnnotationId: null,
+      customAnnotationColor: '#10B981',
+      customAnnotationLineStyle: 'solid',
+      customTextContent: 'Anotação / Cômodo',
+      customTextFontSize: 14,
 
-  setPendingFurnitureItem: (pending) => set({ pendingFurnitureItem: pending }),
+      setActiveAnnotationTool: (tool) => set({ activeAnnotationTool: tool }),
+      setSelectedAnnotationId: (id) => set({ selectedAnnotationId: id }),
+      setCustomAnnotationColor: (color) => set({ customAnnotationColor: color }),
+      setCustomAnnotationLineStyle: (style) => set({ customAnnotationLineStyle: style }),
+      setCustomTextContent: (text) => set({ customTextContent: text }),
+      setCustomTextFontSize: (size) => set({ customTextFontSize: size }),
 
-  rotatePendingFurnitureItem: () => {
-    const pending = get().pendingFurnitureItem;
-    if (!pending) return;
-    const nextRot = (pending.rotation + 45) % 360;
-    set({ pendingFurnitureItem: { ...pending, rotation: nextRot } });
-  },
-
-  setPendingFurnitureRotation: (rotation) => {
-    const pending = get().pendingFurnitureItem;
-    if (!pending) return;
-    const normalized = Math.round(((rotation % 360) + 360) % 360);
-    set({ pendingFurnitureItem: { ...pending, rotation: normalized } });
-  },
-
-  cancelPendingFurnitureItem: () => set({ pendingFurnitureItem: null }),
-
-  setCustomFurnitureName: (name) => set({ customFurnitureName: name }),
-  setCustomFurnitureWidth: (width) => set({ customFurnitureWidth: width }),
-  setCustomFurnitureDepth: (depth) => set({ customFurnitureDepth: depth }),
-  setCustomFurnitureHeight: (height) => set({ customFurnitureHeight: height }),
-  setCustomFurnitureColor: (color) => set({ customFurnitureColor: color }),
-  setCustomFurnitureTextureUrl: (url) => set({ customFurnitureTextureUrl: url }),
-  setCustomFurnitureCategory: (category) => set({ customFurnitureCategory: category }),
-  setCustomFurnitureShape: (shape) => set({ customFurnitureShape: shape }),
-
-  setTerrainSize: (arg1, arg2) => {
-    if (typeof arg1 === 'object' && arg1 !== null) {
-      set((state) => ({
-        terrain: { ...state.terrain, width: arg1.width, length: arg1.length },
-      }));
-    } else {
-      const finalLength = arg2 !== undefined ? arg2 : get().terrain.length;
-      set((state) => ({
-        terrain: { ...state.terrain, width: Number(arg1), length: Number(finalLength) },
-      }));
-    }
-    get().centerView();
-  },
-
-  setTerrainTheme: (theme) =>
-    set((state) => ({
-      terrain: { ...state.terrain, theme },
-    })),
-
-  setTerrainCustomAppearance: (color, secondaryColor, textureUrl) =>
-    set((state) => ({
-      terrain: {
-        ...state.terrain,
-        customColor: color,
-        customSecondaryColor: secondaryColor,
-        customTextureUrl: textureUrl,
-      },
-    })),
-
-  setCustomTerrain: (color, secondaryColor, textureUrl) =>
-    get().setTerrainCustomAppearance(color, secondaryColor, textureUrl),
-
-  setZoom: (newZoom, focalX, focalY) => {
-    const clampedZoom = Math.max(0.25, Math.min(3.5, newZoom));
-    const state = get();
-
-    if (focalX !== undefined && focalY !== undefined) {
-      const zoomRatio = clampedZoom / state.viewState.zoom;
-      const newPanX = focalX - (focalX - state.viewState.panX) * zoomRatio;
-      const newPanY = focalY - (focalY - state.viewState.panY) * zoomRatio;
-
-      set({
-        viewState: {
-          ...state.viewState,
-          zoom: Number(clampedZoom.toFixed(2)),
-          panX: Math.round(newPanX),
-          panY: Math.round(newPanY),
-        },
-      });
-    } else {
-      set({
-        viewState: { ...state.viewState, zoom: Number(clampedZoom.toFixed(2)) },
-      });
-    }
-  },
-
-  pan: (deltaX, deltaY) =>
-    set((state) => ({
-      viewState: {
-        ...state.viewState,
-        panX: state.viewState.panX + deltaX,
-        panY: state.viewState.panY + deltaY,
-      },
-    })),
-
-  rotate: (angleDelta) =>
-    set((state) => ({
-      viewState: {
-        ...state.viewState,
-        rotation: (state.viewState.rotation + angleDelta + 360) % 360,
-      },
-    })),
-
-  rotateClockwise: () => get().rotate(90),
-  rotateCounterClockwise: () => get().rotate(-90),
-
-  resetRotation: () =>
-    set((state) => ({
-      viewState: { ...state.viewState, rotation: 0 },
-    })),
-
-  zoomIn: () => get().setZoom(get().viewState.zoom + 0.15),
-  zoomOut: () => get().setZoom(get().viewState.zoom - 0.15),
-  resetZoom: () => get().setZoom(1.0),
-
-  centerView: () => {
-    const { terrain } = get();
-    const viewportWidth = window.innerWidth;
-    const viewportHeight = window.innerHeight;
-    const terrainWidthPx = terrain.width * terrain.cellSizePixels;
-    const terrainLengthPx = terrain.length * terrain.cellSizePixels;
-
-    const panX = Math.round((viewportWidth - terrainWidthPx) / 2);
-    const panY = Math.round((viewportHeight - terrainLengthPx) / 2);
-
-    set((state) => ({
-      viewState: { ...state.viewState, panX, panY, zoom: 1.0, rotation: 0 },
-    }));
-  },
-
-  centerTerrainInViewport: () => get().centerView(),
-
-  setGridSettings: (settings) =>
-    set((state) => ({
-      gridSettings: { ...state.gridSettings, ...settings },
-    })),
-
-  toggleGrid: () => get().setGridSettings({ showGrid: !get().gridSettings.showGrid }),
-  toggleSubgrid: () => get().setGridSettings({ showSubgrid: !get().gridSettings.showSubgrid }),
-  toggleMeters: () => get().setGridSettings({ showMeters: !get().gridSettings.showMeters }),
-  toggleSnapToGrid: () => get().setGridSettings({ snapToGrid: !get().gridSettings.snapToGrid }),
-
-  setCursorPos: (pos) => set({ cursorPos: pos }),
-
-  addWall: (newWallData) =>
-    set((state) => {
-      const newWall: Wall = {
-        id: `wall_${Date.now()}`,
-        thickness: 0.2,
-        ...newWallData,
-      };
-      return { walls: [...state.walls, newWall] };
-    }),
-
-  paintWall: (wallId, color, textureUrl, side) =>
-    set((state) => {
-      const updatedWalls = state.walls.map((w) => {
-        if (w.id !== wallId) return w;
-        if (!side) {
-          return { ...w, colorSideA: color, textureUrlSideA: textureUrl, colorSideB: color, textureUrlSideB: textureUrl };
-        }
-        if (side === 'sideA') {
-          return { ...w, colorSideA: color, textureUrlSideA: textureUrl };
-        } else {
-          return { ...w, colorSideB: color, textureUrlSideB: textureUrl };
-        }
-      });
-      return { walls: updatedWalls };
-    }),
-
-  removeWall: (id) =>
-    set((state) => ({
-      walls: state.walls.filter((w) => w.id !== id),
-      doorsWindows: state.doorsWindows.filter((dw) => dw.wallId !== id),
-    })),
-
-  clearWalls: () => set({ walls: [] }),
-
-  paintFloorRect: (x1, y1, x2, y2, textureId, color, customTextureUrl) =>
-    set((state) => {
-      const minX = Math.min(x1, x2);
-      const maxX = Math.max(x1, x2);
-      const minY = Math.min(y1, y2);
-      const maxY = Math.max(y1, y2);
-
-      const newFloors = { ...state.floors };
-      for (let x = minX; x <= maxX; x++) {
-        for (let y = minY; y <= maxY; y++) {
-          const key = `${x},${y}`;
-          newFloors[key] = {
-            id: `floor_${key}`,
-            x,
-            y,
-            textureId,
-            color,
-            customTextureUrl,
+      addAnnotation: (annotationData) =>
+        set((state) => {
+          const id = `ann_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`;
+          return {
+            annotations: [...state.annotations, { ...annotationData, id }],
+            selectedAnnotationId: id,
           };
-        }
-      }
-      return { floors: newFloors };
-    }),
+        }),
 
-  eraseFloorRect: (x1, y1, x2, y2) =>
-    set((state) => {
-      const minX = Math.min(x1, x2);
-      const maxX = Math.max(x1, x2);
-      const minY = Math.min(y1, y2);
-      const maxY = Math.max(y1, y2);
+      updateAnnotation: (id, partial) =>
+        set((state) => ({
+          annotations: state.annotations.map((ann) => (ann.id === id ? { ...ann, ...partial } : ann)),
+        })),
 
-      const newFloors = { ...state.floors };
-      for (let x = minX; x <= maxX; x++) {
-        for (let y = minY; y <= maxY; y++) {
-          delete newFloors[`${x},${y}`];
-        }
-      }
-      return { floors: newFloors };
-    }),
+      removeAnnotation: (id) =>
+        set((state) => ({
+          annotations: state.annotations.filter((ann) => ann.id !== id),
+          selectedAnnotationId: state.selectedAnnotationId === id ? null : state.selectedAnnotationId,
+        })),
 
-  removeFloorTile: (x, y) =>
-    set((state) => {
-      const newFloors = { ...state.floors };
-      delete newFloors[`${x},${y}`];
-      return { floors: newFloors };
-    }),
+      clearAnnotations: () => set({ annotations: [], selectedAnnotationId: null }),
 
-  clearFloors: () => set({ floors: {} }),
+      setAnnotationLabelPosition: (id, position) =>
+        set((state) => ({
+          annotations: state.annotations.map((ann) =>
+            ann.id === id ? { ...ann, labelPosition: position } : ann
+          ),
+        })),
 
-  addDoorWindow: (dwData) =>
-    set((state) => {
-      const newDW: DoorWindow = {
-        id: `dw_${Date.now()}`,
-        ...dwData,
-      };
-      return { doorsWindows: [...state.doorsWindows, newDW] };
-    }),
+      setWallLabelOffset: (wallId, offset) =>
+        set((state) => ({
+          walls: state.walls.map((w) => (w.id === wallId ? { ...w, labelOffset: offset } : w)),
+        })),
 
-  removeDoorWindow: (id) =>
-    set((state) => ({
-      doorsWindows: state.doorsWindows.filter((dw) => dw.id !== id),
-    })),
-
-  addItem: (itemData) =>
-    set((state) => {
-      const newItem: FurnitureItem = {
-        id: `item_${Date.now()}`,
-        ...itemData,
-      };
-      return { items: [...state.items, newItem] };
-    }),
-
-  updateItemPosition: (id, x, y, rotation) =>
-    set((state) => ({
-      items: state.items.map((it) => (it.id === id ? { ...it, x, y, rotation } : it)),
-    })),
-
-  removeItem: (id) =>
-    set((state) => ({
-      items: state.items.filter((it) => it.id !== id),
-    })),
-
-  loadProjectState: (data) => {
-    get().cancelPendingDoor();
-    get().cancelPendingFurnitureItem();
-    if (!data || typeof data !== 'object') return;
-    set((state) => ({
-      projectName: typeof data.projectName === 'string' ? data.projectName : state.projectName,
-      projectDescription: typeof data.projectDescription === 'string' ? data.projectDescription : state.projectDescription,
-      terrain: data.terrain || state.terrain,
-      walls: Array.isArray(data.walls) ? data.walls : [],
-      floors: data.floors && typeof data.floors === 'object' ? data.floors : {},
-      doorsWindows: Array.isArray(data.doorsWindows) ? data.doorsWindows : [],
-      items: Array.isArray(data.items) ? data.items : [],
-      customTextures: Array.isArray(data.customTextures) ? data.customTextures : state.customTextures,
-      savedCustomFurniture: Array.isArray(data.savedCustomFurniture) ? data.savedCustomFurniture : state.savedCustomFurniture,
-    }));
-    get().centerView();
-  },
-
-  resetProject: () => {
-    get().cancelPendingDoor();
-    get().cancelPendingFurnitureItem();
-    try {
-      localStorage.removeItem('sims-architect-storage');
-      localStorage.removeItem('sims_saved_furniture');
-      localStorage.removeItem('sims_custom_textures');
-    } catch {}
-    set({
       projectName: 'Meu Projeto Sims',
-      projectDescription: '',
-      terrain: DEFAULT_TERRAIN,
+      projectDescription: 'Planta baixa arquitetônica criada no Sims Architect 2D/3D Planner.',
+
+      customTextures: [
+        { id: 'tex_grass', name: 'Grama Natural', url: '/textures/grass.svg' },
+        { id: 'tex_wood', name: 'Madeira Clara', url: '/textures/wood.svg' },
+        { id: 'tex_wood_dark', name: 'Madeira Escura', url: '/textures/wood_dark.svg' },
+        { id: 'tex_brick', name: 'Tijolo Vermelho', url: '/textures/brick_red.svg' },
+        { id: 'tex_marble', name: 'Mármore Polido', url: '/textures/marble.svg' },
+        { id: 'tex_metal_inox', name: 'Aço Inox Escovado', url: '/textures/metal_inox.svg' },
+        { id: 'tex_fabric_blue', name: 'Tecido Azul', url: '/textures/fabric_blue.svg' },
+        { id: 'tex_fabric_purple', name: 'Tecido Roxo', url: '/textures/fabric_purple.svg' },
+        { id: 'tex_tile_blue', name: 'Azulejo Hidráulico', url: '/textures/tile_blue.svg' },
+      ],
+
+      selectedWallColor: '#E2E8F0',
+      selectedWallTexture: undefined,
+
+      selectedFloorTexture: 'wood',
+      selectedFloorColor: undefined,
+      selectedFloorCustomTexture: undefined,
+
+      selectedDoorWindow: CATALOG_DOORS_WINDOWS[0],
+      customDoorWidth: 1.0,
+      customDoorHeight: 2.1,
+      customDoorFrameColor: '#F59E0B',
+      pendingDoor: null,
+
+      selectedBuyCategory: 'bedroom',
+      pendingFurnitureItem: null,
+      customFurnitureName: 'Móvel Customizado',
+      customFurnitureWidth: 1.5,
+      customFurnitureDepth: 1.0,
+      customFurnitureHeight: 1.0,
+      customFurnitureColor: '#8B5CF6',
+      customFurnitureTextureUrl: undefined,
+      customFurnitureCategory: 'living',
+      customFurnitureShape: 'box',
+
+      savedCustomFurniture: [],
+
       walls: [],
       floors: {},
       doorsWindows: [],
       items: [],
-      customTextures: [
-        { id: 'tex_wood_warm', name: 'Madeira Nobre', url: '/textures/wood.svg' },
-        { id: 'tex_brick_red', name: 'Tijolo Aparente', url: '/textures/brick_red.svg' },
-        { id: 'tex_marble_white', name: 'Mármore Carrara', url: '/textures/marble.svg' },
-        { id: 'tex_tile_blue', name: 'Azulejo Hidráulico', url: '/textures/tile_blue.svg' },
-      ],
-      savedCustomFurniture: [],
-      viewState: DEFAULT_VIEWSTATE,
-      viewMode: '2d',
-      activeMode: 'settings',
-      activeBuildTool: 'wall',
-    });
-  },
 
-  exportJSON: () => {
-    const { projectName, projectDescription, terrain, walls, floors, doorsWindows, items, customTextures, savedCustomFurniture } = get();
-    return JSON.stringify(
-      {
-        appName: 'Sims Architect',
-        version: '2.0',
-        exportedAt: new Date().toISOString(),
-        projectName,
-        projectDescription,
-        terrain,
-        walls,
-        floors,
-        doorsWindows,
-        items,
-        customTextures,
-        savedCustomFurniture,
+      setMode: (mode) => {
+        get().cancelPendingDoor();
+        get().cancelPendingFurnitureItem();
+        set({ activeMode: mode });
       },
-      null,
-      2
-    );
-  },
 
-  importJSON: (jsonString) => {
-    try {
-      const data = JSON.parse(jsonString);
-      if (data && (data.terrain || Array.isArray(data.walls))) {
-        get().loadProjectState(data);
-        return true;
-      }
-      return false;
-    } catch {
-      return false;
-    }
-  },
+      setViewMode: (viewMode) => {
+        get().cancelPendingDoor();
+        get().cancelPendingFurnitureItem();
+        set({ viewMode });
+      },
+
+      setActiveBuildTool: (tool) => {
+        get().cancelPendingDoor();
+        set({ activeBuildTool: tool });
+      },
+
+      setWallViewMode: (mode) => set({ wallViewMode: mode }),
+      setIsSetupModalOpen: (open) => set({ isSetupModalOpen: open }),
+
+      setProjectName: (name) => set({ projectName: name }),
+      setProjectDescription: (desc) => set({ projectDescription: desc }),
+
+      addCustomTexture: (name, url) =>
+        set((state) => ({
+          customTextures: [
+            ...state.customTextures,
+            { id: `tex_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`, name, url },
+          ],
+        })),
+
+      removeCustomTexture: (id) =>
+        set((state) => ({
+          customTextures: state.customTextures.filter((t) => t.id !== id),
+        })),
+
+      addCustomCatalogItem: (itemData) =>
+        set((state) => {
+          const newCatalogItem: FurnitureCatalogItem = {
+            ...itemData,
+            catalogId: `custom_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+            isCustom: true,
+          };
+          return {
+            savedCustomFurniture: [...state.savedCustomFurniture, newCatalogItem],
+          };
+        }),
+
+      removeCustomCatalogItem: (catalogId) =>
+        set((state) => ({
+          savedCustomFurniture: state.savedCustomFurniture.filter((i) => i.catalogId !== catalogId),
+        })),
+
+      setSelectedWallColor: (color) => set({ selectedWallColor: color }),
+      setSelectedWallTexture: (url) => set({ selectedWallTexture: url }),
+
+      setSelectedFloorTexture: (textureId, color, customUrl) =>
+        set((state) => ({
+          selectedFloorTexture: textureId,
+          selectedFloorColor: color !== undefined ? color : (textureId === 'custom' ? state.selectedFloorColor : undefined),
+          selectedFloorCustomTexture: customUrl,
+        })),
+
+      setSelectedFloorColor: (color) => set({ selectedFloorColor: color }),
+      setSelectedFloorCustomTexture: (url) => set({ selectedFloorCustomTexture: url }),
+
+      setSelectedDoorWindow: (item) => {
+        get().cancelPendingDoor();
+        set({ selectedDoorWindow: item });
+      },
+
+      setCustomDoorType: (type) =>
+        set((state) => ({
+          selectedDoorWindow: {
+            ...state.selectedDoorWindow,
+            type,
+            name: type === 'door' ? 'Porta Customizada' : 'Janela Customizada',
+          },
+        })),
+
+      setCustomDoorWidth: (width) => set({ customDoorWidth: width }),
+      setCustomDoorHeight: (height) => set({ customDoorHeight: height }),
+      setCustomDoorFrameColor: (color) => set({ customDoorFrameColor: color }),
+      setPendingDoor: (pending) => set({ pendingDoor: pending }),
+      cancelPendingDoor: () => set({ pendingDoor: null }),
+      toggleDoorFlip: () => {},
+
+      setSelectedBuyCategory: (category) => set({ selectedBuyCategory: category }),
+
+      setPendingFurnitureItem: (pending) => set({ pendingFurnitureItem: pending }),
+
+      rotatePendingFurnitureItem: () => {
+        const pending = get().pendingFurnitureItem;
+        if (!pending) return;
+        const nextRot = (pending.rotation + 45) % 360;
+        set({ pendingFurnitureItem: { ...pending, rotation: nextRot } });
+      },
+
+      setPendingFurnitureRotation: (rotation) => {
+        const pending = get().pendingFurnitureItem;
+        if (!pending) return;
+        const normalized = Math.round(((rotation % 360) + 360) % 360);
+        set({ pendingFurnitureItem: { ...pending, rotation: normalized } });
+      },
+
+      cancelPendingFurnitureItem: () => set({ pendingFurnitureItem: null }),
+
+      setCustomFurnitureName: (name) => set({ customFurnitureName: name }),
+      setCustomFurnitureWidth: (width) => set({ customFurnitureWidth: width }),
+      setCustomFurnitureDepth: (depth) => set({ customFurnitureDepth: depth }),
+      setCustomFurnitureHeight: (height) => set({ customFurnitureHeight: height }),
+      setCustomFurnitureColor: (color) => set({ customFurnitureColor: color }),
+      setCustomFurnitureTextureUrl: (url) => set({ customFurnitureTextureUrl: url }),
+      setCustomFurnitureCategory: (category) => set({ customFurnitureCategory: category }),
+      setCustomFurnitureShape: (shape) => set({ customFurnitureShape: shape }),
+
+      setTerrainSize: (width, length) =>
+        set((state) => ({
+          terrain: { ...state.terrain, width: Number(width), length: Number(length || state.terrain.length) },
+        })),
+
+      setTerrainTheme: (theme) =>
+        set((state) => ({
+          terrain: { ...state.terrain, theme },
+        })),
+
+      setTerrainCustomAppearance: (color, secondaryColor, textureUrl) =>
+        set((state) => ({
+          terrain: { ...state.terrain, customColor: color, customSecondaryColor: secondaryColor, customTextureUrl: textureUrl },
+        })),
+
+      setCustomTerrain: (color, secondaryColor, textureUrl) =>
+        set((state) => ({
+          terrain: { ...state.terrain, customColor: color, customSecondaryColor: secondaryColor, customTextureUrl: textureUrl },
+        })),
+
+      setZoom: (newZoom, focalX, focalY) =>
+        set((state) => {
+          const zoomClamped = Math.max(0.2, Math.min(4.0, newZoom));
+          if (focalX !== undefined && focalY !== undefined) {
+            const factor = zoomClamped / state.viewState.zoom;
+            const newPanX = focalX - (focalX - state.viewState.panX) * factor;
+            const newPanY = focalY - (focalY - state.viewState.panY) * factor;
+            return {
+              viewState: { ...state.viewState, zoom: zoomClamped, panX: newPanX, panY: newPanY },
+            };
+          }
+          return {
+            viewState: { ...state.viewState, zoom: zoomClamped },
+          };
+        }),
+
+      pan: (deltaX, deltaY) =>
+        set((state) => ({
+          viewState: { ...state.viewState, panX: state.viewState.panX + deltaX, panY: state.viewState.panY + deltaY },
+        })),
+
+      rotate: (angleDelta) =>
+        set((state) => ({
+          viewState: { ...state.viewState, rotation: (state.viewState.rotation + angleDelta + 360) % 360 },
+        })),
+
+      rotateClockwise: () =>
+        set((state) => ({
+          viewState: { ...state.viewState, rotation: (state.viewState.rotation + 45) % 360 },
+        })),
+
+      rotateCounterClockwise: () =>
+        set((state) => ({
+          viewState: { ...state.viewState, rotation: (state.viewState.rotation - 45 + 360) % 360 },
+        })),
+
+      resetRotation: () =>
+        set((state) => ({
+          viewState: { ...state.viewState, rotation: 0 },
+        })),
+
+      zoomIn: () => get().setZoom(get().viewState.zoom * 1.2),
+      zoomOut: () => get().setZoom(get().viewState.zoom / 1.2),
+      resetZoom: () => set({ viewState: DEFAULT_VIEWSTATE }),
+      centerView: () => set({ viewState: DEFAULT_VIEWSTATE }),
+      centerTerrainInViewport: (vpWidth = 1200, vpHeight = 800) => {
+        const { terrain } = get();
+        const cellSize = terrain.cellSizePixels || 40;
+        const terrainW = terrain.width * cellSize;
+        const terrainH = terrain.length * cellSize;
+        const targetZoom = Math.min((vpWidth - 100) / terrainW, (vpHeight - 100) / terrainH, 2.0);
+        const panX = (vpWidth - terrainW * targetZoom) / 2;
+        const panY = (vpHeight - terrainH * targetZoom) / 2;
+        set({
+          viewState: { zoom: targetZoom, panX, panY, rotation: 0 },
+        });
+      },
+
+      setGridSettings: (settings) =>
+        set((state) => ({
+          gridSettings: { ...state.gridSettings, ...settings },
+        })),
+
+      toggleGrid: () => set((state) => ({ gridSettings: { ...state.gridSettings, showGrid: !state.gridSettings.showGrid } })),
+      toggleSubgrid: () => set((state) => ({ gridSettings: { ...state.gridSettings, showSubgrid: !state.gridSettings.showSubgrid } })),
+      toggleMeters: () => set((state) => ({ gridSettings: { ...state.gridSettings, showMeters: !state.gridSettings.showMeters } })),
+      toggleSnapToGrid: () => set((state) => ({ gridSettings: { ...state.gridSettings, snapToGrid: !state.gridSettings.snapToGrid } })),
+
+      setCursorPos: (pos) => set({ cursorPos: pos }),
+
+      addWall: (wallData) =>
+        set((state) => {
+          const newWall: Wall = {
+            ...wallData,
+            id: `wall_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+          };
+          return { walls: [...state.walls, newWall] };
+        }),
+
+      paintWall: (wallId, color, textureUrl, side) =>
+        set((state) => ({
+          walls: state.walls.map((w) => {
+            if (w.id !== wallId) return w;
+            if (side === 'sideA') return { ...w, colorSideA: color, textureUrlSideA: textureUrl };
+            if (side === 'sideB') return { ...w, colorSideB: color, textureUrlSideB: textureUrl };
+            return { ...w, colorSideA: color, textureUrlSideA: textureUrl, colorSideB: color, textureUrlSideB: textureUrl };
+          }),
+        })),
+
+      removeWall: (id) =>
+        set((state) => ({
+          walls: state.walls.filter((w) => w.id !== id),
+          doorsWindows: state.doorsWindows.filter((dw) => dw.wallId !== id),
+        })),
+
+      clearWalls: () => set({ walls: [], doorsWindows: [] }),
+
+      paintFloorRect: (x1, y1, x2, y2, textureId, color, customTextureUrl) =>
+        set((state) => {
+          const minX = Math.min(x1, x2);
+          const maxX = Math.max(x1, x2);
+          const minY = Math.min(y1, y2);
+          const maxY = Math.max(y1, y2);
+          const newFloors = { ...state.floors };
+          for (let x = minX; x <= maxX; x++) {
+            for (let y = minY; y <= maxY; y++) {
+              const key = `${x},${y}`;
+              newFloors[key] = {
+                id: `floor_${key}`,
+                x,
+                y,
+                textureId,
+                color,
+                customTextureUrl,
+              };
+            }
+          }
+          return { floors: newFloors };
+        }),
+
+      eraseFloorRect: (x1, y1, x2, y2) =>
+        set((state) => {
+          const minX = Math.min(x1, x2);
+          const maxX = Math.max(x1, x2);
+          const minY = Math.min(y1, y2);
+          const maxY = Math.max(y1, y2);
+          const newFloors = { ...state.floors };
+          for (let x = minX; x <= maxX; x++) {
+            for (let y = minY; y <= maxY; y++) {
+              delete newFloors[`${x},${y}`];
+            }
+          }
+          return { floors: newFloors };
+        }),
+
+      removeFloorTile: (x, y) =>
+        set((state) => {
+          const newFloors = { ...state.floors };
+          delete newFloors[`${x},${y}`];
+          return { floors: newFloors };
+        }),
+
+      clearFloors: () => set({ floors: {} }),
+
+      addDoorWindow: (dwData) =>
+        set((state) => {
+          const newDw: DoorWindow = {
+            ...dwData,
+            id: `dw_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+          };
+          return { doorsWindows: [...state.doorsWindows, newDw] };
+        }),
+
+      removeDoorWindow: (id) =>
+        set((state) => ({
+          doorsWindows: state.doorsWindows.filter((dw) => dw.id !== id),
+        })),
+
+      addItem: (itemData) =>
+        set((state) => {
+          const newItem: FurnitureItem = {
+            ...itemData,
+            id: `item_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+          };
+          return { items: [...state.items, newItem] };
+        }),
+
+      updateItemPosition: (id, x, y, rotation) =>
+        set((state) => ({
+          items: state.items.map((it) => (it.id === id ? { ...it, x, y, rotation } : it)),
+        })),
+
+      removeItem: (id) =>
+        set((state) => ({
+          items: state.items.filter((it) => it.id !== id),
+        })),
+
+      loadProjectState: (data) => {
+        if (!data) return;
+        set({
+          projectName: data.projectName || 'Meu Projeto Sims',
+          projectDescription: data.projectDescription || '',
+          terrain: data.terrain || DEFAULT_TERRAIN,
+          walls: data.walls || [],
+          floors: data.floors || {},
+          doorsWindows: data.doorsWindows || [],
+          items: data.items || [],
+          keybindings: data.keybindings || DEFAULT_KEYBINDINGS,
+          annotations: data.annotations || data.zoneAnnotations || [],
+          customTextures: data.customTextures || [
+            { id: 'tex_grass', name: 'Grama Natural', url: '/textures/grass.svg' },
+            { id: 'tex_wood', name: 'Madeira Clara', url: '/textures/wood.svg' },
+            { id: 'tex_wood_dark', name: 'Madeira Escura', url: '/textures/wood_dark.svg' },
+            { id: 'tex_brick', name: 'Tijolo Vermelho', url: '/textures/brick_red.svg' },
+            { id: 'tex_marble', name: 'Mármore Polido', url: '/textures/marble.svg' },
+            { id: 'tex_metal_inox', name: 'Aço Inox Escovado', url: '/textures/metal_inox.svg' },
+            { id: 'tex_fabric_blue', name: 'Tecido Azul', url: '/textures/fabric_blue.svg' },
+            { id: 'tex_fabric_purple', name: 'Tecido Roxo', url: '/textures/fabric_purple.svg' },
+            { id: 'tex_tile_blue', name: 'Azulejo Hidráulico', url: '/textures/tile_blue.svg' },
+          ],
+          savedCustomFurniture: data.savedCustomFurniture || [],
+          viewState: DEFAULT_VIEWSTATE,
+          viewMode: '2d',
+          activeMode: 'settings',
+          activeBuildTool: 'wall',
+        });
+      },
+
+      resetProject: () =>
+        set({
+          projectName: 'Meu Projeto Sims',
+          projectDescription: 'Planta baixa arquitetônica criada no Sims Architect 2D/3D Planner.',
+          terrain: DEFAULT_TERRAIN,
+          walls: [],
+          floors: {},
+          doorsWindows: [],
+          items: [],
+          annotations: [],
+          selectedAnnotationId: null,
+          customTextures: [
+            { id: 'tex_grass', name: 'Grama Natural', url: '/textures/grass.svg' },
+            { id: 'tex_wood', name: 'Madeira Clara', url: '/textures/wood.svg' },
+            { id: 'tex_wood_dark', name: 'Madeira Escura', url: '/textures/wood_dark.svg' },
+            { id: 'tex_brick', name: 'Tijolo Vermelho', url: '/textures/brick_red.svg' },
+            { id: 'tex_marble', name: 'Mármore Polido', url: '/textures/marble.svg' },
+            { id: 'tex_metal_inox', name: 'Aço Inox Escovado', url: '/textures/metal_inox.svg' },
+            { id: 'tex_fabric_blue', name: 'Tecido Azul', url: '/textures/fabric_blue.svg' },
+            { id: 'tex_fabric_purple', name: 'Tecido Roxo', url: '/textures/fabric_purple.svg' },
+            { id: 'tex_tile_blue', name: 'Azulejo Hidráulico', url: '/textures/tile_blue.svg' },
+          ],
+          savedCustomFurniture: [],
+          viewState: DEFAULT_VIEWSTATE,
+          viewMode: '2d',
+          activeMode: 'settings',
+          activeBuildTool: 'wall',
+        }),
+
+      exportJSON: () => {
+        const { projectName, projectDescription, terrain, walls, floors, doorsWindows, items, customTextures, savedCustomFurniture, keybindings, annotations } = get();
+        return JSON.stringify(
+          {
+            appName: 'Sims Architect',
+            version: '2.5',
+            exportedAt: new Date().toISOString(),
+            projectName,
+            projectDescription,
+            terrain,
+            walls,
+            floors,
+            doorsWindows,
+            items,
+            annotations,
+            keybindings,
+            customTextures,
+            savedCustomFurniture,
+          },
+          null,
+          2
+        );
+      },
+
+      importJSON: (jsonString) => {
+        try {
+          const data = JSON.parse(jsonString);
+          if (data && (data.terrain || Array.isArray(data.walls))) {
+            get().loadProjectState(data);
+            return true;
+          }
+          return false;
+        } catch {
+          return false;
+        }
+      },
     }),
     {
       name: 'sims-architect-storage',
@@ -852,6 +863,8 @@ export const useSimsStore = create<SimsState>()(
         floors: state.floors,
         doorsWindows: state.doorsWindows,
         items: state.items,
+        annotations: state.annotations,
+        keybindings: state.keybindings,
         customTextures: state.customTextures,
         savedCustomFurniture: state.savedCustomFurniture,
       }),

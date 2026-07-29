@@ -14,19 +14,22 @@ export function useKeyboardNavigation() {
       keysPressedRef.current[e.code] = true;
 
       const store = useSimsStore.getState();
+      const kb = store.keybindings;
 
-      // Executa atalhos individuais apenas quando estiver no Modo 2D (Modo 3D possui controle próprio)
+      // Executa atalhos individuais apenas quando estiver no Modo 2D
       if (store.viewMode === '2d') {
-        if (e.code === 'KeyZ') {
+        if (e.code === kb.zoomIn || e.key.toLowerCase() === kb.zoomIn.replace('Key', '').toLowerCase()) {
           store.zoomIn();
-        } else if (e.code === 'KeyC') {
+        } else if (e.code === kb.zoomOut || e.key.toLowerCase() === kb.zoomOut.replace('Key', '').toLowerCase()) {
           store.zoomOut();
-        } else if (e.code === 'KeyX') {
+        } else if (e.code === kb.zoomReset || e.key.toLowerCase() === kb.zoomReset.replace('Key', '').toLowerCase()) {
           store.resetZoom();
-        } else if (e.code === 'KeyQ') {
+        } else if (e.code === kb.rotateCCW || e.key.toLowerCase() === kb.rotateCCW.replace('Key', '').toLowerCase()) {
           store.rotateCounterClockwise();
-        } else if (e.code === 'KeyE') {
+        } else if (e.code === kb.rotateCW || e.key.toLowerCase() === kb.rotateCW.replace('Key', '').toLowerCase()) {
           store.rotateClockwise();
+        } else if (e.code === kb.toggleGrid || e.key.toLowerCase() === kb.toggleGrid.replace('Key', '').toLowerCase()) {
+          store.toggleGrid();
         }
       }
     };
@@ -38,7 +41,7 @@ export function useKeyboardNavigation() {
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('keyup', handleKeyUp);
 
-    // Loop de Navegação Contínua WASD / Setas no Modo 2D (Pan suave)
+    // Loop de Navegação Contínua WASD / Setas no Modo 2D
     let animationFrameId: number;
     const speed = 12; // Pixels por frame
 

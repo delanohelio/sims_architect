@@ -2,9 +2,10 @@ import React, { useRef } from 'react';
 import { useSimsStore } from '../../store/useSimsStore';
 import { useCanvasRenderer } from '../../hooks/useCanvasRenderer';
 import { useBuildInteractions } from '../../hooks/useBuildInteractions';
+import { useAnnotationInteractions } from '../../hooks/useAnnotationInteractions';
 import { Viewport3D } from './Viewport3D';
 import { WallViewControls } from './WallViewControls';
-import { Move, Compass, Sliders, Sofa } from 'lucide-react';
+import { Move, Compass, Sliders, Sofa, Tag, PenTool, Hand } from 'lucide-react';
 
 export function CanvasArea() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -17,6 +18,7 @@ export function CanvasArea() {
     viewMode,
     activeMode,
     activeBuildTool,
+    activeAnnotationTool,
     setCursorPos,
     pan,
     zoomIn,
@@ -37,12 +39,22 @@ export function CanvasArea() {
     pendingFurniturePreview,
   } = useBuildInteractions();
 
+  const {
+    draftPoints: draftAnnotationPoints,
+    handlePointerDown: handleAnnotationPointerDown,
+    handlePointerMove: handleAnnotationPointerMove,
+    handlePointerUp: handleAnnotationPointerUp,
+    cancelDraft: cancelAnnotationDraft,
+    completeDraftManually: completeAnnotationDraft,
+  } = useAnnotationInteractions();
+
   useCanvasRenderer(canvasRef, {
     draftWall,
     draftFloorRect,
     hoveredTarget,
     hoveredWallTarget,
     pendingFurniturePreview,
+    draftAnnotationPoints,
   });
 
   const isPanningRef = useRef(false);
@@ -101,6 +113,10 @@ export function CanvasArea() {
   const handlePointerMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
     updateCursorFromEvent(e);
 
+    if (activeMode === 'annotation') {
+      handleAnnotationPointerMove();
+    }
+
     if (isPanningRef.current) {
       const deltaX = e.clientX - lastMousePosRef.current.x;
       const deltaY = e.clientY - lastMousePosRef.current.y;
@@ -124,14 +140,19 @@ export function CanvasArea() {
       return;
     }
 
-    if (e.button === 0 && (activeMode === 'build' || activeMode === 'buy')) {
-      handlePointerDown(e);
+    if (e.button === 0) {
+      if (activeMode === 'annotation') {
+        handleAnnotationPointerDown();
+      } else if (activeMode === 'build' || activeMode === 'buy') {
+        handlePointerDown(e);
+      }
     }
   };
 
   const handlePointerUpWrapper = () => {
     isPanningRef.current = false;
     handlePointerUp();
+    handleAnnotationPointerUp();
   };
 
   const handleWheel = (e: React.WheelEvent<HTMLCanvasElement>) => {
@@ -186,6 +207,23 @@ export function CanvasArea() {
               <Sliders className="w-3.5 h-3.5 text-cyan-400" />
               <span className="font-semibold text-white">Configurações do Lote • Clique e Arraste para Mover (Pan)</span>
             </>
+          ) : activeMode === 'annotation' ? (
+            <>
+              {activeAnnotationTool === 'draw' ? (
+                <PenTool className="w-3.5 h-3.5 text-teal-400" />
+              ) : activeAnnotationTool === 'text' ? (
+                <Tag className="w-3.5 h-3.5 text-teal-400" />
+              ) : (
+                <Hand className="w-3.5 h-3.5 text-teal-400" />
+              )}
+              <span className="font-semibold text-white">
+                {activeAnnotationTool === 'draw'
+                  ? `Modo Marcação (${draftAnnotationPoints.length} ponto(s) inserido(s))`
+                  : activeAnnotationTool === 'text'
+                  ? 'Modo Texto Livre: Clique no terreno para inserir um rótulo de texto'
+                  : 'Modo Marcação (Mão): Arraste os rótulos de Áreas (m²) ou Medidas de Paredes para posicioná-los'}
+              </span>
+            </>
           ) : activeMode === 'buy' ? (
             <>
               <Sofa className="w-3.5 h-3.5 text-purple-400" />
@@ -217,6 +255,28 @@ export function CanvasArea() {
             </>
           )}
         </div>
+
+        {activeMode === 'annotation' && draftAnnotationPoints.length > 0 && (
+          <div className="flex items-center gap-2 pointer-events-auto animate-in fade-in duration-150">
+            <button
+              onClick={completeAnnotationDraft}
+              disabled={draftAnnotationPoints.length < 3}
+              className={`px-3 py-1.5 rounded-2xl text-xs font-bold transition-all shadow-xl border flex items-center gap-1.5 ${
+                draftAnnotationPoints.length >= 3
+                  ? 'bg-teal-500 hover:bg-teal-400 text-slate-950 border-teal-400 cursor-pointer shadow-teal-500/20'
+                  : 'bg-slate-800 text-slate-500 border-slate-700 cursor-not-allowed'
+              }`}
+            >
+              <span>✓ Concluir Polígono (Enter)</span>
+            </button>
+            <button
+              onClick={cancelAnnotationDraft}
+              className="px-3 py-1.5 rounded-2xl bg-rose-950/80 hover:bg-rose-900 text-rose-300 border border-rose-800/80 text-xs font-semibold transition-all shadow-xl flex items-center gap-1.5 cursor-pointer"
+            >
+              <span>✕ Cancelar Rascunho (Esc)</span>
+            </button>
+          </div>
+        )}
 
         {viewState.rotation !== 0 && (
           <button

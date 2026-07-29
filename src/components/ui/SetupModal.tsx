@@ -5,7 +5,7 @@ import { useSimsStore, PRESET_LOTS } from '../../store/useSimsStore';
 export function SetupModal() {
   const { 
     isSetupModalOpen, 
-    setSetupModalOpen, 
+    setIsSetupModalOpen, 
     terrain, 
     setTerrainSize, 
     centerTerrainInViewport 
@@ -19,7 +19,7 @@ export function SetupModal() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setTerrainSize(width, length);
-    setSetupModalOpen(false);
+    setIsSetupModalOpen(false);
     setTimeout(() => {
       centerTerrainInViewport(window.innerWidth, window.innerHeight);
     }, 50);
@@ -29,7 +29,7 @@ export function SetupModal() {
     setWidth(presetW);
     setLength(presetL);
     setTerrainSize(presetW, presetL);
-    setSetupModalOpen(false);
+    setIsSetupModalOpen(false);
     setTimeout(() => {
       centerTerrainInViewport(window.innerWidth, window.innerHeight);
     }, 50);
@@ -53,7 +53,7 @@ export function SetupModal() {
             </div>
           </div>
           <button
-            onClick={() => setSetupModalOpen(false)}
+            onClick={() => setIsSetupModalOpen(false)}
             className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-all"
           >
             <X className="w-5 h-5" />
@@ -131,7 +131,7 @@ export function SetupModal() {
           <div className="flex items-center gap-3 pt-2">
             <button
               type="button"
-              onClick={() => setSetupModalOpen(false)}
+              onClick={() => setIsSetupModalOpen(false)}
               className="w-1/3 py-2.5 px-4 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold rounded-xl transition-all"
             >
               Cancelar

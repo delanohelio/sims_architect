@@ -72,6 +72,18 @@ O **Sims Architect** é uma aplicação web interativa de arquitetura e design d
   - Configuração de **Nome Customizado**, Categoria Específica, Sliders de **Largura ($W$)**, **Profundidade ($D$)** e **Altura ($H$)** ($0.3\text{m} \dots 5.0\text{m}$), **Formato 3D (Caixa / Cilindro)** e **Aparência (Cor ou Textura)**.
   - **Salvar no Catálogo**: Permite registrar o móvel customizado no catálogo local (com persistência no `localStorage`).
   - **Exibição Multicategoria com Badge Especial**: O móvel customizado salvo aparece tanto na aba **"Customizado"** quanto na aba da sua **categoria escolhida (ex: Sala, Quarto)**, com borda roxa brilhante e badge `★ Custom` em destaque.
+- **Personalização de Atalhos de Teclado no Painel de Configurações**:
+  - Permite re-vincular qualquer tecla para as ações do sistema: Zoom In, Zoom Out, Resetar Zoom, Rotacionar Câmera Horário/Anti-Horário, Rotacionar Móvel, Ferramenta Marreta e Alternar Grid.
+  - Sincronização instantânea com os ouvintes de evento e atalhos exibidos nas dicas e menus.
+- **Menu e Modo "Marcação" de Áreas, Zonas e Textos Livres (`annotation`)**:
+  - **Rascunho Poligonal de Zonas ao Vivo**: Permite clicar no grid para delimitar ambientes com pré-visualização ao vivo de pontos ($P_1, P_2\dots$) e linhas guia. Suporte às teclas **Enter** (concluir zona) e **Esc** (cancelar rascunho), além de botões interativos no HUD.
+  - **Inclusão de Textos Livres**: Ferramenta de inserção de rótulos de texto customizados (ex: *"Entrada Principal"*, *"Área Gourmet"*) com escolha de cor e tamanho de fonte.
+  - **Estilos de Linha de Contorno**: Seleção entre borda `Contínua`, `Pontilhada` (`dashed`) e `Invisível` (`invisible`).
+  - **Mão de Reposicionamento de Rótulos & Cotas**: Ferramenta interativa que permite clicar e arrastar na tela para reposicionar **rótulos de áreas ($m^2$)**, **textos livres** e **cotas de medidas das paredes**.
+- **Exportação HD (PNG/PDF) com Fidelidade Total de Cores e Auto-Fit Maximizados**:
+  - Renderização offscreen com 100% de precisão de cores e texturas em pisos, paredes (Face A e Face B), esquadrias e móveis.
+  - **Auto-Rotação Inteligente para Máximo Preenchimento**: Terrenos verticais/compridos são automaticamente orientados a $90^\circ$ na prancha horizontal para preencher até **95% da página**, eliminando margens brancas gigantescas.
+  - Seleção da qualidade: **Alta (Impressão 4K / 4096px)**, **Média (HD / 2048px)** e **Baixa (SD / 1024px)**, além de fundo branco limpo.
 - **Digitação Direta do Ângulo de Rotação de Móveis ($0^\circ \dots 360^\circ$)**:
   - Adicionada caixa de texto numérico para digitação direta do ângulo exato de rotação do móvel (ex: $30^\circ$, $45^\circ$, $135^\circ$, $270^\circ$) na barra lateral ([BuySidebar.tsx](file:///Users/delano/dev/sims-architect/src/components/layout/BuySidebar.tsx)), além dos botões de preset rápido.
 - **Porta Especial de Correr sem Dobradiça (`door_sliding`)**:

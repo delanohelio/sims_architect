@@ -6,10 +6,11 @@ import {
   Maximize2, 
   Palette,
   Sparkles,
-  Check
+  Check,
+  Keyboard
 } from 'lucide-react';
 import { useSimsStore, PRESET_LOTS } from '../../store/useSimsStore';
-import type { TerrainTheme } from '../../types/sims';
+import type { TerrainTheme, ShortcutAction } from '../../types/sims';
 import { ColorTexturePicker } from '../ui/ColorTexturePicker';
 
 export function SettingsSidebar() {
@@ -367,7 +368,86 @@ export function SettingsSidebar() {
             </label>
           </div>
         </div>
+
+        {/* 5. PERSONALIZAÇÃO DE ATALHOS DE TECLADO */}
+        <div className="space-y-3 pt-2 border-t border-slate-800/80">
+          <label className="text-xs font-bold text-white flex items-center justify-between">
+            <span className="flex items-center gap-2">
+              <Keyboard className="w-4 h-4 text-emerald-400" />
+              <span>Atalhos de Teclado Personalizados</span>
+            </span>
+            <button
+              onClick={useSimsStore.getState().resetKeybindings}
+              className="text-[10px] text-slate-400 hover:text-emerald-400 underline transition-colors"
+            >
+              Restaurar Padrão
+            </button>
+          </label>
+
+          <KeybindingsPanel />
+        </div>
       </div>
     </aside>
+  );
+}
+
+function KeybindingsPanel() {
+  const { keybindings, setKeybinding } = useSimsStore();
+  const [listeningAction, setListeningAction] = useState<ShortcutAction | null>(null);
+
+  const shortcutLabels: Record<ShortcutAction, string> = {
+    zoomIn: 'Aumentar Zoom (+)',
+    zoomOut: 'Diminuir Zoom (-)',
+    zoomReset: 'Resetar Zoom (100%)',
+    rotateCCW: 'Girar Câmera Anti-Horário',
+    rotateCW: 'Girar Câmera Horário',
+    rotateItem: 'Rotacionar Móvel (45°)',
+    hammer: 'Ferramenta Marreta',
+    toggleGrid: 'Alternar Grid',
+  };
+
+  const handleStartListening = (action: ShortcutAction) => {
+    setListeningAction(action);
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (['Escape', 'Tab'].includes(e.code)) {
+        setListeningAction(null);
+        window.removeEventListener('keydown', onKeyDown);
+        return;
+      }
+      setKeybinding(action, e.code);
+      setListeningAction(null);
+      window.removeEventListener('keydown', onKeyDown);
+    };
+
+    window.addEventListener('keydown', onKeyDown, { once: true });
+  };
+
+  return (
+    <div className="space-y-2 bg-slate-950/60 p-3 rounded-2xl border border-slate-800 text-xs">
+      {Object.entries(keybindings).map(([actionKey, code]) => {
+        const action = actionKey as ShortcutAction;
+        const isListening = listeningAction === action;
+        const displayKey = code.replace('Key', '').toUpperCase();
+
+        return (
+          <div key={action} className="flex items-center justify-between py-1 border-b border-slate-900 last:border-0">
+            <span className="text-slate-300">{shortcutLabels[action] || action}</span>
+            <button
+              onClick={() => handleStartListening(action)}
+              className={`px-2.5 py-1 rounded-lg text-[11px] font-mono font-bold transition-all border ${
+                isListening
+                  ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500 animate-pulse'
+                  : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700'
+              }`}
+            >
+              {isListening ? 'Pressione a tecla...' : displayKey}
+            </button>
+          </div>
+        );
+      })}
+    </div>
   );
 }

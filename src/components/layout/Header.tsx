@@ -7,7 +7,8 @@ import {
   Sparkles,
   Layers,
   Box,
-  Layout
+  Layout,
+  Tag
 } from 'lucide-react';
 import { useSimsStore } from '../../store/useSimsStore';
 
@@ -52,7 +53,7 @@ export function Header() {
     setMode, 
     viewMode, 
     setViewMode, 
-    setSetupModalOpen, 
+    setIsSetupModalOpen, 
     centerTerrainInViewport 
   } = useSimsStore();
 
@@ -101,6 +102,12 @@ export function Header() {
           icon={<ShoppingBag className="w-4 h-4" />}
           active={activeMode === 'buy'}
           onClick={() => setMode('buy')}
+        />
+        <ModeButton
+          label="Marcação"
+          icon={<Tag className="w-4 h-4" />}
+          active={activeMode === 'annotation'}
+          onClick={() => setMode('annotation')}
         />
         <ModeButton
           label="Exportar"
@@ -160,7 +167,7 @@ export function Header() {
         )}
 
         <button
-          onClick={() => setSetupModalOpen(true)}
+          onClick={() => setIsSetupModalOpen(true)}
           className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 border border-emerald-500/30 text-xs font-semibold transition-all"
         >
           <span>Novo Terreno</span>

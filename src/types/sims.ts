@@ -1,4 +1,4 @@
-export type AppMode = 'settings' | 'build' | 'buy' | 'export';
+export type AppMode = 'settings' | 'build' | 'buy' | 'annotation' | 'export';
 
 export type ViewMode3D = '2d' | '3d';
 
@@ -6,11 +6,27 @@ export type TerrainTheme = 'grass' | 'blueprint' | 'dark' | 'concrete';
 
 export type BuildTool = 'select' | 'wall' | 'floor' | 'door_window' | 'wall_paint' | 'eraser';
 
+export type AnnotationTool = 'draw' | 'text' | 'hand' | 'select';
+
 export type WallViewMode = 'full' | 'half' | 'low';
 
 export type FloorTextureId = 'grass' | 'wood' | 'marble' | 'tile' | 'dirt' | 'slate' | 'custom';
 
 export type FurnitureCategory = 'bedroom' | 'living' | 'kitchen' | 'bathroom' | 'outdoor' | 'decor' | 'custom';
+
+export type ShortcutAction = 
+  | 'zoomIn' 
+  | 'zoomOut' 
+  | 'zoomReset' 
+  | 'rotateCCW' 
+  | 'rotateCW' 
+  | 'rotateItem' 
+  | 'hammer' 
+  | 'toggleGrid';
+
+export type ExportQuality = 'high' | 'medium' | 'low';
+
+export type AnnotationLineStyle = 'solid' | 'dashed' | 'invisible';
 
 export interface CustomTextureItem {
   id: string;
@@ -70,6 +86,7 @@ export interface Wall {
   textureUrlSideA?: string; // Textura da Face A
   colorSideB?: string;      // Cor da Face B (Externo / Verso)
   textureUrlSideB?: string; // Textura da Face B
+  labelOffset?: Point2D;   // Offset customizado da cota de medida da parede em metros
 }
 
 export interface FloorTile {
@@ -133,4 +150,17 @@ export interface FurnitureItem {
   color: string;
   textureUrl?: string;
   primitiveShape?: 'box' | 'cylinder';
+}
+
+export interface ZoneAnnotation {
+  id: string;
+  name: string;
+  type?: 'zone' | 'text';
+  lineStyle: AnnotationLineStyle;
+  color: string;
+  fillColor?: string;
+  points: Point2D[]; // Vértices fechados do polígono em metros ou [posição] do texto livre
+  labelPosition?: Point2D; // Posição customizada do rótulo (texto de nome e m²)
+  text?: string;       // Conteúdo do texto livre se type === 'text'
+  fontSize?: number;   // Tamanho da fonte em px (padrão: 14)
 }

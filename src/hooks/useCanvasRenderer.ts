@@ -97,6 +97,7 @@ export function useCanvasRenderer(
       primitiveShape?: 'box' | 'cylinder';
       isValid: boolean;
     } | null;
+    draftAnnotationPoints?: { x: number; y: number }[] | null;
   }
 ) {
   const { 
@@ -348,11 +349,11 @@ export function useCanvasRenderer(
 
         ctx.restore();
 
-        // Cota de Dimensão Métricas da Parede em Tempo Real
+        // Cota de Dimensão Métricas da Parede em Tempo Real (suporta offset customizado via ferramenta de mão)
         const wallLenMeters = Math.hypot(wall.x2 - wall.x1, wall.y2 - wall.y1);
         if (wallLenMeters > 0.3) {
-          const midX = (x1 + x2) / 2;
-          const midY = (y1 + y2) / 2;
+          const midX = ((wall.x1 + wall.x2) / 2 + (wall.labelOffset?.x || 0)) * cellSize;
+          const midY = ((wall.y1 + wall.y2) / 2 + (wall.labelOffset?.y || 0)) * cellSize;
           const textStr = `${wallLenMeters.toFixed(2)}m`;
 
           ctx.save();
@@ -474,6 +475,169 @@ export function useCanvasRenderer(
         const isHovered = previews?.hoveredTarget?.type === 'furniture' && previews.hoveredTarget.id === item.id;
         renderFurniture2D(ctx, item, cellSize, viewState.zoom, getLoadedImage, false, isHovered);
       });
+
+      // 7.5. RENDERIZAÇÃO DAS MARCAÇÕES DE ÁREA & TEXTOS LIVRES (`annotations`)
+      const { annotations, cursorPos } = useSimsStore.getState();
+      annotations.forEach((ann) => {
+        if (!ann.points || ann.points.length === 0) return;
+
+        if (ann.type === 'text' || (!ann.type && ann.points.length === 1)) {
+          // TEXTO LIVRE STANDALONE
+          const pos = ann.labelPosition || ann.points[0];
+          const pxX = pos.x * cellSize;
+          const pxY = pos.y * cellSize;
+          const textStr = ann.text || ann.name || 'Anotação';
+
+          ctx.save();
+          ctx.font = `bold ${Math.max(12, (ann.fontSize || 14) / viewState.zoom)}px Inter, sans-serif`;
+          const textW = ctx.measureText(textStr).width;
+          const badgeW = textW + 16 / viewState.zoom;
+          const badgeH = (ann.fontSize || 14) * 1.5 / viewState.zoom;
+
+          ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
+          ctx.strokeStyle = ann.color || '#10B981';
+          ctx.lineWidth = 1.5 / viewState.zoom;
+          ctx.beginPath();
+          ctx.roundRect(pxX - badgeW / 2, pxY - badgeH / 2, badgeW, badgeH, 6 / viewState.zoom);
+          ctx.fill();
+          ctx.stroke();
+
+          ctx.fillStyle = ann.color || '#FFFFFF';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(textStr, pxX, pxY);
+          ctx.restore();
+          return;
+        }
+
+        if (ann.points.length < 3) return;
+
+        const pointsPx = ann.points.map((p) => ({ x: p.x * cellSize, y: p.y * cellSize }));
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.moveTo(pointsPx[0].x, pointsPx[0].y);
+        for (let i = 1; i < pointsPx.length; i++) {
+          ctx.lineTo(pointsPx[i].x, pointsPx[i].y);
+        }
+        ctx.closePath();
+
+        // Preenchimento translúcido
+        ctx.fillStyle = ann.fillColor || (ann.color ? `${ann.color}22` : 'rgba(16, 185, 129, 0.15)');
+        ctx.fill();
+
+        // Contorno (solid, dashed, invisible)
+        if (ann.lineStyle !== 'invisible') {
+          ctx.strokeStyle = ann.color || '#10B981';
+          ctx.lineWidth = 2.5 / viewState.zoom;
+          if (ann.lineStyle === 'dashed') {
+            ctx.setLineDash([8 / viewState.zoom, 6 / viewState.zoom]);
+          } else {
+            ctx.setLineDash([]);
+          }
+          ctx.stroke();
+        }
+
+        // Rótulo da Marcação (Nome + m²)
+        let sumX = 0;
+        let sumY = 0;
+        let areaCalc = 0;
+        const n = ann.points.length;
+        for (let i = 0; i < n; i++) {
+          sumX += ann.points[i].x;
+          sumY += ann.points[i].y;
+          const j = (i + 1) % n;
+          areaCalc += ann.points[i].x * ann.points[j].y;
+          areaCalc -= ann.points[j].x * ann.points[i].y;
+        }
+        const centroid = { x: sumX / n, y: sumY / n };
+        const areaM2 = Math.abs(areaCalc) / 2;
+
+        const labelPos = ann.labelPosition || centroid;
+        const labelPxX = labelPos.x * cellSize;
+        const labelPxY = labelPos.y * cellSize;
+
+        const titleStr = ann.name;
+        const areaStr = `${areaM2.toFixed(2)} m²`;
+
+        ctx.font = `bold ${Math.max(10, 11 / viewState.zoom)}px Inter, sans-serif`;
+        const w1 = ctx.measureText(titleStr).width;
+        ctx.font = `bold ${Math.max(9, 9 / viewState.zoom)}px monospace`;
+        const w2 = ctx.measureText(areaStr).width;
+        const badgeW = Math.max(w1, w2) + 14 / viewState.zoom;
+        const badgeH = 28 / viewState.zoom;
+
+        // Badge da Marcação
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
+        ctx.strokeStyle = ann.color || '#10B981';
+        ctx.lineWidth = 1.5 / viewState.zoom;
+        ctx.setLineDash([]);
+        ctx.beginPath();
+        ctx.roundRect(labelPxX - badgeW / 2, labelPxY - badgeH / 2, badgeW, badgeH, 6 / viewState.zoom);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = '#FFFFFF';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'top';
+        ctx.font = `bold ${Math.max(10, 11 / viewState.zoom)}px Inter, sans-serif`;
+        ctx.fillText(titleStr, labelPxX, labelPxY - badgeH / 2 + 4 / viewState.zoom);
+
+        ctx.fillStyle = '#38BDF8';
+        ctx.font = `bold ${Math.max(9, 9 / viewState.zoom)}px monospace`;
+        ctx.fillText(areaStr, labelPxX, labelPxY - badgeH / 2 + 15 / viewState.zoom);
+
+        ctx.restore();
+      });
+
+      // 7.6. RENDERIZAÇÃO DO RASCUNHO EM ANDAMENTO DA MARCAÇÃO DE ZONA
+      if (previews?.draftAnnotationPoints && previews.draftAnnotationPoints.length > 0) {
+        const dpts = previews.draftAnnotationPoints;
+        const ptsPx = dpts.map((p) => ({ x: p.x * cellSize, y: p.y * cellSize }));
+
+        ctx.save();
+        ctx.strokeStyle = '#10B981';
+        ctx.lineWidth = 2.5 / viewState.zoom;
+        ctx.setLineDash([6 / viewState.zoom, 4 / viewState.zoom]);
+
+        ctx.beginPath();
+        ctx.moveTo(ptsPx[0].x, ptsPx[0].y);
+        for (let i = 1; i < ptsPx.length; i++) {
+          ctx.lineTo(ptsPx[i].x, ptsPx[i].y);
+        }
+
+        // Linha de guia até a posição atual do cursor
+        if (cursorPos.x !== null && cursorPos.y !== null) {
+          const curPxX = (cursorPos.snapVertexX ?? cursorPos.x) * cellSize;
+          const curPxY = (cursorPos.snapVertexY ?? cursorPos.y) * cellSize;
+          ctx.lineTo(curPxX, curPxY);
+
+          if (ptsPx.length >= 3) {
+            ctx.lineTo(ptsPx[0].x, ptsPx[0].y);
+          }
+        }
+        ctx.stroke();
+
+        // Desenha os nós / vértices numerados P1, P2, P3...
+        ptsPx.forEach((pt, idx) => {
+          ctx.fillStyle = '#10B981';
+          ctx.strokeStyle = '#FFFFFF';
+          ctx.lineWidth = 2 / viewState.zoom;
+          ctx.setLineDash([]);
+          ctx.beginPath();
+          ctx.arc(pt.x, pt.y, 6 / viewState.zoom, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
+
+          ctx.fillStyle = '#FFFFFF';
+          ctx.font = `bold ${Math.max(8, 9 / viewState.zoom)}px Inter, sans-serif`;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(`P${idx + 1}`, pt.x, pt.y - 12 / viewState.zoom);
+        });
+
+        ctx.restore();
+      }
 
       // 8. FANTASMA DE PREVIEW DE POSICIONAMENTO DE MÓVEL
       if (previews?.pendingFurniturePreview) {
