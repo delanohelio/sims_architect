@@ -149,12 +149,14 @@ interface SimsState {
   // NOVO MENU: MARCAÇÕES / ZONAS E TEXTOS LIVRES
   annotations: ZoneAnnotation[];
   activeAnnotationTool: AnnotationTool;
+  magicZoneMode: 'walls' | 'floors';
   selectedAnnotationId: string | null;
   customAnnotationColor: string;
   customAnnotationLineStyle: AnnotationLineStyle;
   customTextContent: string;
   customTextFontSize: number;
   setActiveAnnotationTool: (tool: AnnotationTool) => void;
+  setMagicZoneMode: (mode: 'walls' | 'floors') => void;
   setSelectedAnnotationId: (id: string | null) => void;
   setCustomAnnotationColor: (color: string) => void;
   setCustomAnnotationLineStyle: (style: AnnotationLineStyle) => void;
@@ -396,6 +398,7 @@ export const useSimsStore = create<SimsState>()(
       // MARCAÇÕES DE ÁREA / ZONAS E TEXTOS LIVRES
       annotations: [],
       activeAnnotationTool: 'draw',
+      magicZoneMode: 'walls',
       selectedAnnotationId: null,
       customAnnotationColor: '#10B981',
       customAnnotationLineStyle: 'solid',
@@ -403,6 +406,7 @@ export const useSimsStore = create<SimsState>()(
       customTextFontSize: 14,
 
       setActiveAnnotationTool: (tool) => set({ activeAnnotationTool: tool }),
+      setMagicZoneMode: (mode) => set({ magicZoneMode: mode }),
       setSelectedAnnotationId: (id) => set({ selectedAnnotationId: id }),
       setCustomAnnotationColor: (color) => set({ customAnnotationColor: color }),
       setCustomAnnotationLineStyle: (style) => set({ customAnnotationLineStyle: style }),

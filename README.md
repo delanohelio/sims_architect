@@ -10,6 +10,7 @@ O **Sims Architect** é uma aplicação web interativa de arquitetura e design d
 - **Renderização 2D**: HTML5 Canvas API com escalonamento High-DPI (`useCanvasRenderer.ts`)
 - **Renderização 3D**: Three.js WebGL com sombras PCFShadowMap, iluminação direcional solar e materiais físicos (`Viewport3D.tsx`)
 - **Otimização de Memória**: Descarte estrito de geometrias, materiais e texturas WebGL GPU no desmonte de maquetes 3D e renderização exclusiva por modo
+- **Algoritmos de IA & CAD**: Reconhecimento automático de áreas/cômodos via **Flood Fill 2D (BFS)** em malha de $0,1\text{m}$ e atração magnética de vértices (`roomDetectionUtils.ts`)
 - **Estilização & UI**: Vanilla CSS + Tailwind CSS v4 com estéticas dark mode futuristas e glassmorphism
 - **Ícones**: Lucide React
 
@@ -35,15 +36,16 @@ O **Sims Architect** é uma aplicação web interativa de arquitetura e design d
 - **Atalhos Rápidos de Categorias (`1` a `6`)**: Quarto, Sala, Cozinha, Banheiro, Exterior, Customizados.
 - **Móvel Genérico Customizado & Rotação Numérica**: Rotação de $0^\circ$ a $360^\circ$ ou tecla **R**.
 
-### 4. 🏷️ Menu "Marcação" (Zonas, Áreas, Régua/Cotas e Textos Livres)
-- **📏 Régua / Cota de Medida e Zonas de Área (Mínimo de 0,1m por Linha)**:
-  - Criação de áreas/polígonos com alinhamento (snap) e restrição mínima de $0,1\text{m}$ ($10\text{cm}$) por segmento de linha.
-  - Medição de cotas de régua entre 2 pontos com cálculo em tempo real.
+### 4. 🏷️ Menu "Marcação" (Zonas, Áreas, Varinha Mágica e Régua)
+- **🎯 Snap de 0,1m em Qualquer Quadrante & Atração Magnética de Paredes**:
+  - Resolução sub-métrica de $0,1\text{m}$ em qualquer posição do terreno para alinhamento fino de áreas e cotas de régua.
+  - Atraimento magnético automático para cantos e vértices de paredes existentes ($\le 0,18\text{m}$).
+- **🪄 Varinha Mágica (Auto-Detecção Automática de Ambientes em 1 Clique)**:
+  - 🧱 **Baseado em Paredes (Cômodo Fechado)**: Algoritmo Flood Fill 2D que reconhece o perímetro exato do cômodo limitado por paredes ao clicar no seu interior.
+  - 🎨 **Baseado em Pisos Conectados**: Reconhece a mancha inteira de ladrilhos contíguos aplicados ao clicar sobre um piso.
 
 ### 5. ⚡ Otimização Extrema de Memória & Alternância 2D / 3D com Tela de Carregamento
-- **Gerenciamento Inteligente da DOM & GPU**:
-  - Apenas a visualização ativa (Planta Baixa 2D ou Maquete 3D) permanece montada no sistema.
-  - Ao mudar para 2D, a maquete 3D é completamente desmontada e o Three.js executa percurso de objetos com `geometry.dispose()`, `material.dispose()`, `texture.dispose()` e `renderer.forceContextLoss()`.
+- **Gerenciamento Inteligente da DOM & GPU**: Apenas a visão ativa (Planta 2D ou Maquete 3D) permanece montada no DOM com descarte estrito de memória WebGL.
 - **Tela de Transição e Loading**: Feedback visual com animação enquanto a memória WebGL é purgada e reorganizada.
 
 ### 6. ⌨️ Hierarquia da Tecla ESC em 2 Passos

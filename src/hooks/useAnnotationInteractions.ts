@@ -34,10 +34,15 @@ export function calculatePolygonArea(points: Point2D[]): number {
   return Math.abs(area) / 2;
 }
 
+import { detectRoomFromWalls, detectZoneFromFloors } from '../utils/roomDetectionUtils';
+
 export function useAnnotationInteractions() {
   const {
     activeMode,
     activeAnnotationTool,
+    magicZoneMode,
+    terrain,
+    floors,
     cursorPos,
     customAnnotationColor,
     customAnnotationLineStyle,
@@ -92,17 +97,23 @@ export function useAnnotationInteractions() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [activeMode, draftPoints, customAnnotationLineStyle, customAnnotationColor]);
 
+  const findWallVertexSnap = (x: number, y: number): Point2D | null => {
+    for (const w of walls) {
+      if (Math.hypot(x - w.x1, y - w.y1) <= 0.18) return { x: w.x1, y: w.y1 };
+      if (Math.hypot(x - w.x2, y - w.y2) <= 0.18) return { x: w.x2, y: w.y2 };
+    }
+    return null;
+  };
+
   const handlePointerDown = () => {
     if (activeMode !== 'annotation') return;
 
     if (activeAnnotationTool === 'draw') {
-      const rawX = cursorPos.snapVertexX ?? cursorPos.x;
-      const rawY = cursorPos.snapVertexY ?? cursorPos.y;
+      if (cursorPos.x === null || cursorPos.y === null || !cursorPos.isInsideTerrain) return;
 
-      if (rawX === null || rawY === null || !cursorPos.isInsideTerrain) return;
-
-      const snapX = Number((Math.round(rawX / 0.1) * 0.1).toFixed(2));
-      const snapY = Number((Math.round(rawY / 0.1) * 0.1).toFixed(2));
+      const wallSnap = findWallVertexSnap(cursorPos.x, cursorPos.y);
+      const snapX = wallSnap ? wallSnap.x : Number((Math.round(cursorPos.x / 0.1) * 0.1).toFixed(2));
+      const snapY = wallSnap ? wallSnap.y : Number((Math.round(cursorPos.y / 0.1) * 0.1).toFixed(2));
       const newPoint: Point2D = { x: snapX, y: snapY };
 
       // Se clicar perto do primeiro ponto (distância < 0.6m) e houver pelo menos 3 pontos, fecha o polígono
@@ -133,6 +144,43 @@ export function useAnnotationInteractions() {
       }
 
       setDraftPoints((prev) => [...prev, newPoint]);
+    } else if (activeAnnotationTool === 'magic_zone') {
+      if (cursorPos.x === null || cursorPos.y === null || !cursorPos.isInsideTerrain) return;
+
+      const seedX = cursorPos.x;
+      const seedY = cursorPos.y;
+
+      if (magicZoneMode === 'walls') {
+        const result = detectRoomFromWalls(seedX, seedY, walls, terrain);
+        if (result && result.points.length >= 3) {
+          addAnnotation({
+            type: 'zone',
+            name: `Zona ${annotations.length + 1}`,
+            lineStyle: customAnnotationLineStyle,
+            color: customAnnotationColor,
+            points: result.points,
+            labelPosition: result.centroid,
+          });
+        } else if (result?.error === 'unclosed') {
+          alert('⚠️ O ambiente não está totalmente fechado por paredes!');
+        } else if (result?.error === 'on_wall') {
+          alert('⚠️ Clique no interior do cômodo, não sobre a parede!');
+        }
+      } else if (magicZoneMode === 'floors') {
+        const result = detectZoneFromFloors(seedX, seedY, floors);
+        if (result && result.points.length >= 3) {
+          addAnnotation({
+            type: 'zone',
+            name: `Zona ${annotations.length + 1}`,
+            lineStyle: customAnnotationLineStyle,
+            color: customAnnotationColor,
+            points: result.points,
+            labelPosition: result.centroid,
+          });
+        } else if (result?.error === 'no_floor') {
+          alert('⚠️ Nenhum piso encontrado neste ponto do terreno!');
+        }
+      }
     } else if (activeAnnotationTool === 'ruler') {
       const px = cursorPos.snapVertexX ?? cursorPos.x;
       const py = cursorPos.snapVertexY ?? cursorPos.y;

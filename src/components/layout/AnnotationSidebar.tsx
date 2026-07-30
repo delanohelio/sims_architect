@@ -7,7 +7,8 @@ import {
   Layers, 
   Maximize,
   Type,
-  Ruler
+  Ruler,
+  Wand2
 } from 'lucide-react';
 import { useSimsStore } from '../../store/useSimsStore';
 import type { AnnotationLineStyle } from '../../types/sims';
@@ -17,12 +18,14 @@ export function AnnotationSidebar() {
   const {
     annotations,
     activeAnnotationTool,
+    magicZoneMode,
     selectedAnnotationId,
     customAnnotationColor,
     customAnnotationLineStyle,
     customTextContent,
     customTextFontSize,
     setActiveAnnotationTool,
+    setMagicZoneMode,
     setSelectedAnnotationId,
     setCustomAnnotationColor,
     setCustomAnnotationLineStyle,
@@ -80,7 +83,19 @@ export function AnnotationSidebar() {
               }`}
             >
               <PenTool className="w-3.5 h-3.5" />
-              <span>Zona (m²)</span>
+              <span>Zona Manual (m²)</span>
+            </button>
+
+            <button
+              onClick={() => setActiveAnnotationTool('magic_zone')}
+              className={`flex items-center gap-1.5 py-2 px-2 rounded-xl text-[11px] font-semibold transition-all ${
+                activeAnnotationTool === 'magic_zone'
+                  ? 'bg-gradient-to-r from-teal-400 to-emerald-400 text-slate-950 font-bold shadow-lg shadow-teal-500/20'
+                  : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
+              }`}
+            >
+              <Wand2 className="w-3.5 h-3.5 text-amber-300" />
+              <span>Varinha Mágica</span>
             </button>
 
             <button
@@ -120,11 +135,46 @@ export function AnnotationSidebar() {
             </button>
           </div>
 
+          {/* CRITÉRIO DA VARINHA MÁGICA */}
+          {activeAnnotationTool === 'magic_zone' && (
+            <div className="space-y-2 p-3 bg-teal-950/40 rounded-2xl border border-teal-500/30 animate-in fade-in duration-150">
+              <label className="text-[11px] font-bold text-teal-300 flex items-center gap-1.5">
+                <Wand2 className="w-3.5 h-3.5 text-amber-300" />
+                <span>Critério de Reconhecimento</span>
+              </label>
+
+              <div className="grid grid-cols-2 gap-1.5">
+                <button
+                  onClick={() => setMagicZoneMode('walls')}
+                  className={`py-1.5 px-2 rounded-xl text-[11px] font-bold transition-all border ${
+                    magicZoneMode === 'walls'
+                      ? 'bg-amber-500 text-slate-950 border-amber-400 shadow-md'
+                      : 'bg-slate-900 text-slate-400 border-slate-700 hover:text-slate-200'
+                  }`}
+                >
+                  🧱 Paredes
+                </button>
+                <button
+                  onClick={() => setMagicZoneMode('floors')}
+                  className={`py-1.5 px-2 rounded-xl text-[11px] font-bold transition-all border ${
+                    magicZoneMode === 'floors'
+                      ? 'bg-amber-500 text-slate-950 border-amber-400 shadow-md'
+                      : 'bg-slate-900 text-slate-400 border-slate-700 hover:text-slate-200'
+                  }`}
+                >
+                  🎨 Pisos
+                </button>
+              </div>
+            </div>
+          )}
+
           <p className="text-[11px] text-slate-400 bg-slate-950/40 p-2.5 rounded-xl border border-slate-800/60">
             {activeAnnotationTool === 'draw' ? (
-              <>💡 <strong>Desenhar Zona:</strong> Clique no grid para adicionar vértices e formar um polígono ($P_1, P_2\dots$). Use <strong>Enter</strong> para concluir ou <strong>Esc</strong> para cancelar.</>
+              <>💡 <strong>Desenhar Zona:</strong> Clique no grid (passo 0,1m) para adicionar vértices e formar um polígono. Use <strong>Enter</strong> para concluir ou <strong>Esc</strong> para cancelar.</>
+            ) : activeAnnotationTool === 'magic_zone' ? (
+              <>🪄 <strong>Varinha Mágica:</strong> Clique em qualquer ponto do terreno para reconhecer e gerar a área automaticamente com base nas <strong>{magicZoneMode === 'walls' ? 'Paredes ao redor' : 'Pisos conectados'}</strong>!</>
             ) : activeAnnotationTool === 'ruler' ? (
-              <>📏 <strong>Régua / Cota de Medida:</strong> Clique no ponto inicial e arraste até o segundo ponto. Clique novamente ou pressione <strong>Enter</strong> para fixar a medida na tela. Use <strong>Esc</strong> para descartar.</>
+              <>📏 <strong>Régua / Cota de Medida:</strong> Clique no ponto inicial e arraste até o segundo ponto. Clique novamente para fixar a medida.</>
             ) : activeAnnotationTool === 'text' ? (
               <>📝 <strong>Texto Livre:</strong> Digite o texto desejado no campo abaixo e clique em qualquer lugar do terreno para fixá-lo.</>
             ) : (

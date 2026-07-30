@@ -6,7 +6,7 @@ export type TerrainTheme = 'grass' | 'blueprint' | 'dark' | 'concrete';
 
 export type BuildTool = 'select' | 'wall' | 'floor' | 'door_window' | 'wall_paint' | 'eraser';
 
-export type AnnotationTool = 'draw' | 'ruler' | 'text' | 'hand' | 'select';
+export type AnnotationTool = 'draw' | 'magic_zone' | 'ruler' | 'text' | 'hand' | 'select';
 
 export type WallViewMode = 'full' | 'half' | 'low';
 

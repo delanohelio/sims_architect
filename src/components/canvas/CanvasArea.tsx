@@ -5,7 +5,7 @@ import { useBuildInteractions } from '../../hooks/useBuildInteractions';
 import { useAnnotationInteractions } from '../../hooks/useAnnotationInteractions';
 import { Viewport3D } from './Viewport3D';
 import { WallViewControls } from './WallViewControls';
-import { Move, Compass, Sliders, Sofa, Tag, PenTool, Hand } from 'lucide-react';
+import { Move, Compass, Sliders, Sofa, Tag, PenTool, Hand, Wand2 } from 'lucide-react';
 
 export function CanvasArea() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -229,6 +229,8 @@ export function CanvasArea() {
             <>
               {activeAnnotationTool === 'draw' ? (
                 <PenTool className="w-3.5 h-3.5 text-teal-400" />
+              ) : activeAnnotationTool === 'magic_zone' ? (
+                <Wand2 className="w-3.5 h-3.5 text-amber-300 animate-bounce" />
               ) : activeAnnotationTool === 'text' ? (
                 <Tag className="w-3.5 h-3.5 text-teal-400" />
               ) : (
@@ -236,7 +238,9 @@ export function CanvasArea() {
               )}
               <span className="font-semibold text-white">
                 {activeAnnotationTool === 'draw'
-                  ? `Modo Marcação (${draftAnnotationPoints.length} ponto(s) inserido(s))`
+                  ? `Modo Marcação Manual (${draftAnnotationPoints.length} ponto(s) - passo 0,1m)`
+                  : activeAnnotationTool === 'magic_zone'
+                  ? 'Varinha Mágica: Clique dentro do cômodo para reconhecer a área automaticamente'
                   : activeAnnotationTool === 'text'
                   ? 'Modo Texto Livre: Clique no terreno para inserir um rótulo de texto'
                   : 'Modo Marcação (Mão): Arraste os rótulos de Áreas (m²) ou Medidas de Paredes para posicioná-los'}
