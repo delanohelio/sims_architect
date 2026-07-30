@@ -52,7 +52,11 @@ O **Sims Architect** é uma aplicação web interativa de arquitetura e design d
 ### 6. 🔄 Reset Automático de Ferramentas ao Trocar de Modo
 - Ao alternar entre modos (ex: Construção → Compras → Marcação), a ferramenta ativa do modo anterior é automaticamente desativada e resetada para o estado padrão (Mão/Seleção).
 
-### 7. ⌨️ Hierarquia da Tecla ESC em 2 Passos
+### 7. 🖨️ Exportação Flexível (PNG & PDF Multi-Páginas)
+- **Fidelidade Total de Cores no PDF**: A exportação de imagem para o PDF segue exatamente o mesmo princípio da exportação PNG, preservando as cores dos elementos e o estilo de fundo selecionado pelo usuário (**Fundo Tema** vs **Fundo Branco/Prancha**).
+- **Relatório Executivo**: Geração de PDF de 2 páginas incluindo Planta HD e Quantitativo de Materiais.
+
+### 8. ⌨️ Hierarquia da Tecla ESC em 2 Passos
 - **1º Clique no ESC**: Cancela o rascunho em andamento, esquadria pendente, móvel suspenso ou elemento selecionado, **mantendo a ferramenta atual ativa**.
 - **2º Clique no ESC**: Se não houver ação em andamento nem item selecionado, alterna a ferramenta ativa para a **Mão / Seleção (`select` / `hand`)**.
 

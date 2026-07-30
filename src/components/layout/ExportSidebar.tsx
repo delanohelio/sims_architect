@@ -136,8 +136,8 @@ export function ExportSidebar() {
   // 4. EXPORTAR PDF MULTI-PÁGINAS (PÁG 1: PLANTA EM ALTA RESOLUÇÃO; PÁG 2+: MARCAÇÕES E RELATÓRIO DE MATERIAIS)
   const handleExportPDF = () => {
     try {
-      // Sempre gera com alta qualidade e fundo branco na primeira página do PDF para impressão
-      const imgData = getSafePlanDataUrl('high', true);
+      // Gera com alta qualidade respeitando o estilo de fundo escolhido pelo usuário (Fundo Tema vs Fundo Branco)
+      const imgData = getSafePlanDataUrl('high');
 
       const pdf = new jsPDF({
         orientation: 'landscape',
@@ -147,50 +147,96 @@ export function ExportSidebar() {
 
       const pageWidth = 297;
       const pageHeight = 210;
+      const isDarkPdf = !useWhiteBackground;
 
       // ==========================================
       // PÁGINA 1: PLANTA BAIXA ARQUITETÔNICA HD
       // ==========================================
       const headerHeight = 36;
 
-      // Cabeçalho Fundo Limpo
-      pdf.setFillColor(248, 250, 252); // slate-50
-      pdf.rect(0, 0, pageWidth, headerHeight, 'F');
-      pdf.setFillColor(16, 185, 129); // emerald-500
-      pdf.rect(0, headerHeight - 1.5, pageWidth, 1.5, 'F');
+      if (isDarkPdf) {
+        // Fundo da Página Escuro (Tema)
+        pdf.setFillColor(15, 23, 42); // slate-900
+        pdf.rect(0, 0, pageWidth, pageHeight, 'F');
 
-      pdf.setFont('helvetica', 'bold');
-      pdf.setFontSize(16);
-      pdf.setTextColor(15, 23, 42);
-      const displayTitle = projectName.trim() ? projectName : 'Sims Architect — Planta Baixa Executiva';
-      pdf.text(displayTitle, 14, 14);
+        // Cabeçalho Fundo Escuro
+        pdf.setFillColor(30, 41, 59); // slate-800
+        pdf.rect(0, 0, pageWidth, headerHeight, 'F');
+        pdf.setFillColor(16, 185, 129); // emerald-500
+        pdf.rect(0, headerHeight - 1.5, pageWidth, 1.5, 'F');
 
-      const dateStr = new Date().toLocaleDateString('pt-BR', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-      });
-      pdf.setFont('helvetica', 'normal');
-      pdf.setFontSize(9);
-      pdf.setTextColor(100, 116, 139);
-      pdf.text(`Data: ${dateStr} | Prancha 01/02`, pageWidth - 14, 14, { align: 'right' });
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(16);
+        pdf.setTextColor(255, 255, 255);
+        const displayTitle = projectName.trim() ? projectName : 'Sims Architect — Planta Baixa Executiva';
+        pdf.text(displayTitle, 14, 14);
 
-      if (projectDescription.trim()) {
-        pdf.setFont('helvetica', 'italic');
+        const dateStr = new Date().toLocaleDateString('pt-BR', {
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric',
+        });
+        pdf.setFont('helvetica', 'normal');
         pdf.setFontSize(9);
-        pdf.setTextColor(71, 85, 105);
-        pdf.text(projectDescription.substring(0, 110), 14, 22);
-      }
+        pdf.setTextColor(148, 163, 184);
+        pdf.text(`Data: ${dateStr} | Prancha 01/02`, pageWidth - 14, 14, { align: 'right' });
 
-      const totalArea = terrain.width * terrain.length;
-      pdf.setFont('helvetica', 'bold');
-      pdf.setFontSize(9);
-      pdf.setTextColor(14, 165, 233);
-      pdf.text(
-        `Lote: ${terrain.width}m × ${terrain.length}m (${totalArea} m²) | Paredes: ${walls.length} | Zonas Demarcadas: ${annotations.length}`,
-        14,
-        headerHeight - 6
-      );
+        if (projectDescription.trim()) {
+          pdf.setFont('helvetica', 'italic');
+          pdf.setFontSize(9);
+          pdf.setTextColor(203, 213, 225);
+          pdf.text(projectDescription.substring(0, 110), 14, 22);
+        }
+
+        const totalArea = terrain.width * terrain.length;
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(9);
+        pdf.setTextColor(56, 189, 248);
+        pdf.text(
+          `Lote: ${terrain.width}m × ${terrain.length}m (${totalArea} m²) | Paredes: ${walls.length} | Zonas Demarcadas: ${annotations.length}`,
+          14,
+          headerHeight - 6
+        );
+      } else {
+        // Cabeçalho Fundo Limpo (Branco)
+        pdf.setFillColor(248, 250, 252); // slate-50
+        pdf.rect(0, 0, pageWidth, headerHeight, 'F');
+        pdf.setFillColor(16, 185, 129); // emerald-500
+        pdf.rect(0, headerHeight - 1.5, pageWidth, 1.5, 'F');
+
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(16);
+        pdf.setTextColor(15, 23, 42);
+        const displayTitle = projectName.trim() ? projectName : 'Sims Architect — Planta Baixa Executiva';
+        pdf.text(displayTitle, 14, 14);
+
+        const dateStr = new Date().toLocaleDateString('pt-BR', {
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric',
+        });
+        pdf.setFont('helvetica', 'normal');
+        pdf.setFontSize(9);
+        pdf.setTextColor(100, 116, 139);
+        pdf.text(`Data: ${dateStr} | Prancha 01/02`, pageWidth - 14, 14, { align: 'right' });
+
+        if (projectDescription.trim()) {
+          pdf.setFont('helvetica', 'italic');
+          pdf.setFontSize(9);
+          pdf.setTextColor(71, 85, 105);
+          pdf.text(projectDescription.substring(0, 110), 14, 22);
+        }
+
+        const totalArea = terrain.width * terrain.length;
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(9);
+        pdf.setTextColor(14, 165, 233);
+        pdf.text(
+          `Lote: ${terrain.width}m × ${terrain.length}m (${totalArea} m²) | Paredes: ${walls.length} | Zonas Demarcadas: ${annotations.length}`,
+          14,
+          headerHeight - 6
+        );
+      }
 
       // Imagem HD da Planta
       const imgProps = pdf.getImageProperties(imgData);
