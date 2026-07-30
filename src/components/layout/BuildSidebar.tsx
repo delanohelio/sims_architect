@@ -10,7 +10,8 @@ import {
   Layers,
   RotateCcw,
   Paintbrush,
-  Sliders
+  Sliders,
+  Hand
 } from 'lucide-react';
 import { useSimsStore, CATALOG_DOORS_WINDOWS } from '../../store/useSimsStore';
 import type { BuildTool, FloorTextureId } from '../../types/sims';
@@ -132,12 +133,13 @@ export function BuildSidebar() {
     },
   ];
 
-  const tools: { id: BuildTool; label: string; icon: React.ReactNode }[] = [
-    { id: 'wall', label: 'Paredes', icon: <Layers className="w-4 h-4" /> },
-    { id: 'wall_paint', label: 'Pintar Paredes', icon: <Paintbrush className="w-4 h-4" /> },
-    { id: 'floor', label: 'Pisos', icon: <Palette className="w-4 h-4" /> },
-    { id: 'door_window', label: 'Portas/Janelas', icon: <DoorClosed className="w-4 h-4" /> },
-    { id: 'eraser', label: 'Marreta', icon: <Hammer className="w-4 h-4" /> },
+  const tools: { id: BuildTool; label: string; shortcut: string; icon: React.ReactNode }[] = [
+    { id: 'select', label: 'Mão (Selecionar)', shortcut: 'S', icon: <Hand className="w-4 h-4" /> },
+    { id: 'wall', label: 'Paredes', shortcut: 'W', icon: <Layers className="w-4 h-4" /> },
+    { id: 'wall_paint', label: 'Pintar Paredes', shortcut: 'P', icon: <Paintbrush className="w-4 h-4" /> },
+    { id: 'floor', label: 'Pisos', shortcut: 'F', icon: <Palette className="w-4 h-4" /> },
+    { id: 'door_window', label: 'Portas/Janelas', shortcut: 'D', icon: <DoorClosed className="w-4 h-4" /> },
+    { id: 'eraser', label: 'Marreta', shortcut: 'H', icon: <Hammer className="w-4 h-4" /> },
   ];
 
   return (
@@ -165,14 +167,19 @@ export function BuildSidebar() {
                   setActiveBuildTool(t.id);
                   cancelPendingDoor();
                 }}
-                className={`flex items-center gap-1.5 px-2.5 py-2 rounded-xl text-xs font-semibold transition-all ${
+                className={`flex items-center justify-between px-2.5 py-2 rounded-xl text-xs font-semibold transition-all ${
                   active
                     ? 'bg-gradient-to-r from-amber-500 to-orange-600 text-white shadow-md shadow-amber-500/20 scale-[1.02]'
                     : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
                 }`}
               >
-                {t.icon}
-                <span className="truncate">{t.label}</span>
+                <div className="flex items-center gap-1.5 truncate">
+                  {t.icon}
+                  <span className="truncate">{t.label}</span>
+                </div>
+                <span className="text-[9px] font-mono font-bold opacity-60 bg-slate-950/60 px-1 py-0.5 rounded border border-white/10 shrink-0 ml-1">
+                  [{t.shortcut}]
+                </span>
               </button>
             );
           })}

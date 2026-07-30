@@ -527,6 +527,72 @@ export function useCanvasRenderer(
           return;
         }
 
+        if (ann.type === 'ruler' && ann.points.length === 2) {
+          // RÉGUA / COTA DE MEDIDA SALVA
+          const p1Px = { x: ann.points[0].x * cellSize, y: ann.points[0].y * cellSize };
+          const p2Px = { x: ann.points[1].x * cellSize, y: ann.points[1].y * cellSize };
+          const distMeters = Math.hypot(ann.points[1].x - ann.points[0].x, ann.points[1].y - ann.points[0].y);
+          const textStr = `${distMeters.toFixed(2)}m`;
+
+          ctx.save();
+
+          if (ann.lineStyle !== 'invisible') {
+            ctx.strokeStyle = ann.color || '#38BDF8';
+            ctx.lineWidth = 2.0 / viewState.zoom;
+            if (ann.lineStyle === 'dashed') {
+              ctx.setLineDash([8 / viewState.zoom, 6 / viewState.zoom]);
+            } else {
+              ctx.setLineDash([]);
+            }
+            ctx.beginPath();
+            ctx.moveTo(p1Px.x, p1Px.y);
+            ctx.lineTo(p2Px.x, p2Px.y);
+            ctx.stroke();
+
+            const angle = Math.atan2(p2Px.y - p1Px.y, p2Px.x - p1Px.x);
+            const perpAngle = angle + Math.PI / 2;
+            const tickLen = 6 / viewState.zoom;
+
+            ctx.setLineDash([]);
+            ctx.beginPath();
+            ctx.moveTo(p1Px.x - Math.cos(perpAngle) * tickLen, p1Px.y - Math.sin(perpAngle) * tickLen);
+            ctx.lineTo(p1Px.x + Math.cos(perpAngle) * tickLen, p1Px.y + Math.sin(perpAngle) * tickLen);
+
+            ctx.moveTo(p2Px.x - Math.cos(perpAngle) * tickLen, p2Px.y - Math.sin(perpAngle) * tickLen);
+            ctx.lineTo(p2Px.x + Math.cos(perpAngle) * tickLen, p2Px.y + Math.sin(perpAngle) * tickLen);
+            ctx.stroke();
+          }
+
+          const midPos = ann.labelPosition || {
+            x: (ann.points[0].x + ann.points[1].x) / 2,
+            y: (ann.points[0].y + ann.points[1].y) / 2,
+          };
+          const midPxX = midPos.x * cellSize;
+          const midPxY = midPos.y * cellSize;
+
+          ctx.font = `bold ${Math.max(10, 11 / viewState.zoom)}px monospace`;
+          const textWidth = ctx.measureText(textStr).width;
+          const badgeW = textWidth + 12 / viewState.zoom;
+          const badgeH = 18 / viewState.zoom;
+
+          ctx.fillStyle = 'rgba(15, 23, 42, 0.95)';
+          ctx.strokeStyle = ann.color || '#38BDF8';
+          ctx.lineWidth = 1.5 / viewState.zoom;
+          ctx.setLineDash([]);
+          ctx.beginPath();
+          ctx.roundRect(midPxX - badgeW / 2, midPxY - badgeH / 2, badgeW, badgeH, 4 / viewState.zoom);
+          ctx.fill();
+          ctx.stroke();
+
+          ctx.fillStyle = '#FFFFFF';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(textStr, midPxX, midPxY);
+
+          ctx.restore();
+          return;
+        }
+
         if (ann.points.length < 3) return;
 
         const pointsPx = ann.points.map((p) => ({ x: p.x * cellSize, y: p.y * cellSize }));
@@ -603,57 +669,127 @@ export function useCanvasRenderer(
         ctx.fillStyle = '#38BDF8';
         ctx.font = `bold ${Math.max(9, 9 / viewState.zoom)}px monospace`;
         ctx.fillText(areaStr, labelPxX, labelPxY - badgeH / 2 + 15 / viewState.zoom);
-
         ctx.restore();
       });
 
-      // 7.6. RENDERIZAÇÃO DO RASCUNHO EM ANDAMENTO DA MARCAÇÃO DE ZONA
+      // 7.6. RENDERIZAÇÃO DO RASCUNHO EM ANDAMENTO (ZONA OU RÉGUA/COTA)
       if (previews?.draftAnnotationPoints && previews.draftAnnotationPoints.length > 0) {
         const dpts = previews.draftAnnotationPoints;
-        const ptsPx = dpts.map((p) => ({ x: p.x * cellSize, y: p.y * cellSize }));
+        const { activeAnnotationTool, customAnnotationColor, customAnnotationLineStyle } = useSimsStore.getState();
 
-        ctx.save();
-        ctx.strokeStyle = '#10B981';
-        ctx.lineWidth = 2.5 / viewState.zoom;
-        ctx.setLineDash([6 / viewState.zoom, 4 / viewState.zoom]);
+        if (activeAnnotationTool === 'ruler' && dpts.length === 1 && cursorPos.x !== null && cursorPos.y !== null) {
+          const p1 = dpts[0];
+          const px = cursorPos.snapVertexX ?? cursorPos.x;
+          const py = cursorPos.snapVertexY ?? cursorPos.y;
+          const p2 = { x: px, y: py };
+          const distMeters = Math.hypot(p2.x - p1.x, p2.y - p1.y);
 
-        ctx.beginPath();
-        ctx.moveTo(ptsPx[0].x, ptsPx[0].y);
-        for (let i = 1; i < ptsPx.length; i++) {
-          ctx.lineTo(ptsPx[i].x, ptsPx[i].y);
-        }
+          const p1Px = { x: p1.x * cellSize, y: p1.y * cellSize };
+          const p2Px = { x: p2.x * cellSize, y: p2.y * cellSize };
+          const midPxX = (p1Px.x + p2Px.x) / 2;
+          const midPxY = (p1Px.y + p2Px.y) / 2;
 
-        // Linha de guia até a posição atual do cursor
-        if (cursorPos.x !== null && cursorPos.y !== null) {
-          const curPxX = (cursorPos.snapVertexX ?? cursorPos.x) * cellSize;
-          const curPxY = (cursorPos.snapVertexY ?? cursorPos.y) * cellSize;
-          ctx.lineTo(curPxX, curPxY);
+          const textStr = `${distMeters.toFixed(2)}m`;
 
-          if (ptsPx.length >= 3) {
-            ctx.lineTo(ptsPx[0].x, ptsPx[0].y);
+          ctx.save();
+          ctx.strokeStyle = customAnnotationColor || '#38BDF8';
+          ctx.lineWidth = 2.5 / viewState.zoom;
+
+          if (customAnnotationLineStyle === 'dashed') {
+            ctx.setLineDash([8 / viewState.zoom, 6 / viewState.zoom]);
+          } else if (customAnnotationLineStyle === 'invisible') {
+            ctx.globalAlpha = 0.3;
+            ctx.setLineDash([4 / viewState.zoom, 4 / viewState.zoom]);
+          } else {
+            ctx.setLineDash([]);
           }
-        }
-        ctx.stroke();
 
-        // Desenha os nós / vértices numerados P1, P2, P3...
-        ptsPx.forEach((pt, idx) => {
-          ctx.fillStyle = '#10B981';
-          ctx.strokeStyle = '#FFFFFF';
-          ctx.lineWidth = 2 / viewState.zoom;
+          ctx.beginPath();
+          ctx.moveTo(p1Px.x, p1Px.y);
+          ctx.lineTo(p2Px.x, p2Px.y);
+          ctx.stroke();
+
+          // Ticks perpendiculares
+          const angle = Math.atan2(p2Px.y - p1Px.y, p2Px.x - p1Px.x);
+          const perpAngle = angle + Math.PI / 2;
+          const tickLen = 8 / viewState.zoom;
+
+          ctx.globalAlpha = 1.0;
           ctx.setLineDash([]);
           ctx.beginPath();
-          ctx.arc(pt.x, pt.y, 6 / viewState.zoom, 0, Math.PI * 2);
+          ctx.moveTo(p1Px.x - Math.cos(perpAngle) * tickLen, p1Px.y - Math.sin(perpAngle) * tickLen);
+          ctx.lineTo(p1Px.x + Math.cos(perpAngle) * tickLen, p1Px.y + Math.sin(perpAngle) * tickLen);
+
+          ctx.moveTo(p2Px.x - Math.cos(perpAngle) * tickLen, p2Px.y - Math.sin(perpAngle) * tickLen);
+          ctx.lineTo(p2Px.x + Math.cos(perpAngle) * tickLen, p2Px.y + Math.sin(perpAngle) * tickLen);
+          ctx.stroke();
+
+          // Badge com a distância em tempo real
+          ctx.font = `bold ${Math.max(10, 11 / viewState.zoom)}px monospace`;
+          const textWidth = ctx.measureText(textStr).width;
+          const badgeW = textWidth + 14 / viewState.zoom;
+          const badgeH = 20 / viewState.zoom;
+
+          ctx.fillStyle = 'rgba(8, 145, 178, 0.95)';
+          ctx.strokeStyle = '#22D3EE';
+          ctx.lineWidth = 2 / viewState.zoom;
+          ctx.beginPath();
+          ctx.roundRect(midPxX - badgeW / 2, midPxY - badgeH / 2, badgeW, badgeH, 4 / viewState.zoom);
           ctx.fill();
           ctx.stroke();
 
           ctx.fillStyle = '#FFFFFF';
-          ctx.font = `bold ${Math.max(8, 9 / viewState.zoom)}px Inter, sans-serif`;
           ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
-          ctx.fillText(`P${idx + 1}`, pt.x, pt.y - 12 / viewState.zoom);
-        });
+          ctx.fillText(textStr, midPxX, midPxY);
 
-        ctx.restore();
+          ctx.restore();
+        } else {
+          // Rascunho de Polígono de Zona
+          const ptsPx = dpts.map((p) => ({ x: p.x * cellSize, y: p.y * cellSize }));
+
+          ctx.save();
+          ctx.strokeStyle = '#10B981';
+          ctx.lineWidth = 2.5 / viewState.zoom;
+          ctx.setLineDash([6 / viewState.zoom, 4 / viewState.zoom]);
+
+          ctx.beginPath();
+          ctx.moveTo(ptsPx[0].x, ptsPx[0].y);
+          for (let i = 1; i < ptsPx.length; i++) {
+            ctx.lineTo(ptsPx[i].x, ptsPx[i].y);
+          }
+
+          // Linha de guia até a posição atual do cursor
+          if (cursorPos.x !== null && cursorPos.y !== null) {
+            const curPxX = (cursorPos.snapVertexX ?? cursorPos.x) * cellSize;
+            const curPxY = (cursorPos.snapVertexY ?? cursorPos.y) * cellSize;
+            ctx.lineTo(curPxX, curPxY);
+
+            if (ptsPx.length >= 3) {
+              ctx.lineTo(ptsPx[0].x, ptsPx[0].y);
+            }
+          }
+          ctx.stroke();
+
+          // Desenha os nós / vértices numerados P1, P2, P3...
+          ptsPx.forEach((pt, idx) => {
+            ctx.fillStyle = '#10B981';
+            ctx.strokeStyle = '#FFFFFF';
+            ctx.lineWidth = 2 / viewState.zoom;
+            ctx.setLineDash([]);
+            ctx.beginPath();
+            ctx.arc(pt.x, pt.y, 6 / viewState.zoom, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+
+            ctx.fillStyle = '#FFFFFF';
+            ctx.font = `bold ${Math.max(8, 9 / viewState.zoom)}px Inter, sans-serif`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(`P${idx + 1}`, pt.x, pt.y - 12 / viewState.zoom);
+          });
+          ctx.restore();
+        }
       }
 
       // 8. FANTASMA DE PREVIEW DE POSICIONAMENTO DE MÓVEL

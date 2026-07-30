@@ -108,6 +108,45 @@ export function useBuildInteractions() {
         cancelPendingFurnitureItem();
         setSelectedWallId(null);
       }
+
+      // Atalhos de Ferramentas de Construção
+      if (e.code === kb.toolSelect || e.code === 'KeyS') {
+        setMode('build');
+        setActiveBuildTool('select');
+      } else if (e.code === kb.toolWall || e.code === 'KeyW') {
+        setMode('build');
+        setActiveBuildTool('wall');
+      } else if (e.code === kb.toolPaint || e.code === 'KeyP') {
+        setMode('build');
+        setActiveBuildTool('wall_paint');
+      } else if (e.code === kb.toolFloor || e.code === 'KeyF') {
+        setMode('build');
+        setActiveBuildTool('floor');
+      } else if (e.code === kb.toolDoorWindow || e.code === 'KeyD') {
+        setMode('build');
+        setActiveBuildTool('door_window');
+      }
+
+      // Atalhos de Categorias do Modo Compra
+      if (e.code === kb.catBedroom || e.code === 'Digit1') {
+        setMode('buy');
+        store.setSelectedBuyCategory('bedroom');
+      } else if (e.code === kb.catLiving || e.code === 'Digit2') {
+        setMode('buy');
+        store.setSelectedBuyCategory('living');
+      } else if (e.code === kb.catKitchen || e.code === 'Digit3') {
+        setMode('buy');
+        store.setSelectedBuyCategory('kitchen');
+      } else if (e.code === kb.catBathroom || e.code === 'Digit4') {
+        setMode('buy');
+        store.setSelectedBuyCategory('bathroom');
+      } else if (e.code === kb.catOutdoor || e.code === 'Digit5') {
+        setMode('buy');
+        store.setSelectedBuyCategory('outdoor');
+      } else if (e.code === kb.catCustom || e.code === 'Digit6') {
+        setMode('buy');
+        store.setSelectedBuyCategory('custom');
+      }
     };
 
     const handleKeyUp = (e: KeyboardEvent) => {
@@ -316,14 +355,13 @@ export function useBuildInteractions() {
   const handlePointerDown = (e: React.PointerEvent) => {
     if (e.button !== 0) return;
 
-    // VERIFICA SE CLICOU EM UMA PAREDE PARA SELECIONAR OU ARRASTAR
-    const hoveredTarget = getHoveredTarget();
-    if (hoveredTarget && hoveredTarget.type === 'wall' && hoveredTarget.wall) {
-      const wall = hoveredTarget.wall;
-      setSelectedWallId(wall.id);
+    // SELEÇÃO E ARRASTO DE PAREDE APENAS NA FERRAMENTA MÃO ('select') OU MODO MARCAÇÃO
+    if (activeBuildTool === 'select' || activeMode === 'annotation') {
+      const hoveredTarget = getHoveredTarget();
+      if (hoveredTarget && hoveredTarget.type === 'wall' && hoveredTarget.wall) {
+        const wall = hoveredTarget.wall;
+        setSelectedWallId(wall.id);
 
-      // Se a ferramenta for 'select' ou 'wall' ou 'hand', inicia o arrasto da parede
-      if (activeBuildTool === 'select' || activeBuildTool === 'wall' || activeMode === 'annotation') {
         if (cursorPos.x !== null && cursorPos.y !== null) {
           const step = 0.1;
           const curX = Math.round(cursorPos.x / step) * step;
@@ -333,9 +371,9 @@ export function useBuildInteractions() {
           setDragWallStartPos({ x: curX, y: curY });
           return;
         }
+      } else {
+        setSelectedWallId(null);
       }
-    } else if (activeBuildTool !== 'wall_paint' && activeBuildTool !== 'door_window') {
-      setSelectedWallId(null);
     }
 
     // INTERAÇÃO NO MODO COMPRA (`activeMode === 'buy'`)

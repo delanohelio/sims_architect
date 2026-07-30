@@ -104,6 +104,33 @@ export function useAnnotationInteractions() {
       }
 
       setDraftPoints((prev) => [...prev, newPoint]);
+    } else if (activeAnnotationTool === 'ruler') {
+      const px = cursorPos.snapVertexX ?? cursorPos.x;
+      const py = cursorPos.snapVertexY ?? cursorPos.y;
+      if (px === null || py === null || !cursorPos.isInsideTerrain) return;
+
+      if (draftPoints.length === 0) {
+        setDraftPoints([{ x: Number(px.toFixed(2)), y: Number(py.toFixed(2)) }]);
+      } else {
+        const p1 = draftPoints[0];
+        const p2 = { x: Number(px.toFixed(2)), y: Number(py.toFixed(2)) };
+        const dist = Math.hypot(p2.x - p1.x, p2.y - p1.y);
+
+        if (dist >= 0.1) {
+          const midX = (p1.x + p2.x) / 2;
+          const midY = (p1.y + p2.y) / 2;
+
+          addAnnotation({
+            type: 'ruler',
+            name: `Medida (${dist.toFixed(2)}m)`,
+            lineStyle: customAnnotationLineStyle,
+            color: customAnnotationColor,
+            points: [p1, p2],
+            labelPosition: { x: Number(midX.toFixed(2)), y: Number(midY.toFixed(2)) },
+          });
+        }
+        setDraftPoints([]);
+      }
     } else if (activeAnnotationTool === 'text') {
       const px = cursorPos.x;
       const py = cursorPos.y;
@@ -184,6 +211,30 @@ export function useAnnotationInteractions() {
   };
 
   const completeDraftManually = () => {
+    if (activeAnnotationTool === 'ruler' && draftPoints.length === 1 && cursorPos.x !== null && cursorPos.y !== null) {
+      const p1 = draftPoints[0];
+      const px = cursorPos.snapVertexX ?? cursorPos.x;
+      const py = cursorPos.snapVertexY ?? cursorPos.y;
+      const p2 = { x: Number(px.toFixed(2)), y: Number(py.toFixed(2)) };
+      const dist = Math.hypot(p2.x - p1.x, p2.y - p1.y);
+
+      if (dist >= 0.1) {
+        const midX = (p1.x + p2.x) / 2;
+        const midY = (p1.y + p2.y) / 2;
+
+        addAnnotation({
+          type: 'ruler',
+          name: `Medida (${dist.toFixed(2)}m)`,
+          lineStyle: customAnnotationLineStyle,
+          color: customAnnotationColor,
+          points: [p1, p2],
+          labelPosition: { x: Number(midX.toFixed(2)), y: Number(midY.toFixed(2)) },
+        });
+      }
+      setDraftPoints([]);
+      return;
+    }
+
     if (draftPoints.length >= 3) {
       const centroid = calculatePolygonCentroid(draftPoints);
       addAnnotation({

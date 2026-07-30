@@ -6,7 +6,7 @@ export type TerrainTheme = 'grass' | 'blueprint' | 'dark' | 'concrete';
 
 export type BuildTool = 'select' | 'wall' | 'floor' | 'door_window' | 'wall_paint' | 'eraser';
 
-export type AnnotationTool = 'draw' | 'text' | 'hand' | 'select';
+export type AnnotationTool = 'draw' | 'ruler' | 'text' | 'hand' | 'select';
 
 export type WallViewMode = 'full' | 'half' | 'low';
 
@@ -22,7 +22,18 @@ export type ShortcutAction =
   | 'rotateCW' 
   | 'rotateItem' 
   | 'hammer' 
-  | 'toggleGrid';
+  | 'toggleGrid'
+  | 'toolSelect'
+  | 'toolWall'
+  | 'toolPaint'
+  | 'toolFloor'
+  | 'toolDoorWindow'
+  | 'catBedroom'
+  | 'catLiving'
+  | 'catKitchen'
+  | 'catBathroom'
+  | 'catOutdoor'
+  | 'catCustom';
 
 export type ExportQuality = 'high' | 'medium' | 'low';
 
@@ -155,7 +166,7 @@ export interface FurnitureItem {
 export interface ZoneAnnotation {
   id: string;
   name: string;
-  type?: 'zone' | 'text';
+  type?: 'zone' | 'text' | 'ruler';
   lineStyle: AnnotationLineStyle;
   color: string;
   fillColor?: string;

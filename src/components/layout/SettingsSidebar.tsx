@@ -404,6 +404,17 @@ function KeybindingsPanel() {
     rotateItem: 'Rotacionar Móvel (45°)',
     hammer: 'Ferramenta Marreta',
     toggleGrid: 'Alternar Grid',
+    toolSelect: 'Construção: Mão (Selecionar)',
+    toolWall: 'Construção: Parede',
+    toolPaint: 'Construção: Pintar Parede',
+    toolFloor: 'Construção: Piso',
+    toolDoorWindow: 'Construção: Esquadrias',
+    catBedroom: 'Compra: Categoria Quarto',
+    catLiving: 'Compra: Categoria Sala',
+    catKitchen: 'Compra: Categoria Cozinha',
+    catBathroom: 'Compra: Categoria Banheiro',
+    catOutdoor: 'Compra: Categoria Exterior',
+    catCustom: 'Compra: Categoria Customizado',
   };
 
   const handleStartListening = (action: ShortcutAction) => {

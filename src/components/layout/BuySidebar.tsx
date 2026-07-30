@@ -20,13 +20,13 @@ import {
   Check,
 } from 'lucide-react';
 
-const CATEGORIES: { id: FurnitureCategory; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
-  { id: 'bedroom', label: 'Quarto', icon: Bed },
-  { id: 'living', label: 'Sala', icon: Sofa },
-  { id: 'kitchen', label: 'Cozinha', icon: Utensils },
-  { id: 'bathroom', label: 'Banheiro', icon: Bath },
-  { id: 'outdoor', label: 'Exterior', icon: Trees },
-  { id: 'custom', label: 'Customizado', icon: Box },
+const CATEGORIES: { id: FurnitureCategory; label: string; shortcut: string; icon: React.ComponentType<{ className?: string }> }[] = [
+  { id: 'bedroom', label: 'Quarto', shortcut: '1', icon: Bed },
+  { id: 'living', label: 'Sala', shortcut: '2', icon: Sofa },
+  { id: 'kitchen', label: 'Cozinha', shortcut: '3', icon: Utensils },
+  { id: 'bathroom', label: 'Banheiro', shortcut: '4', icon: Bath },
+  { id: 'outdoor', label: 'Exterior', shortcut: '5', icon: Trees },
+  { id: 'custom', label: 'Customizado', shortcut: '6', icon: Box },
 ];
 
 export function BuySidebar() {
@@ -214,14 +214,19 @@ export function BuySidebar() {
               <button
                 key={cat.id}
                 onClick={() => setSelectedBuyCategory(cat.id)}
-                className={`py-2 px-2 rounded-xl text-xs font-medium flex flex-col items-center gap-1 transition-all ${
+                className={`py-2 px-1.5 rounded-xl text-xs font-medium flex flex-col items-center justify-center gap-0.5 transition-all ${
                   isActive
                     ? 'bg-purple-600/90 text-white border border-purple-400/30 shadow-lg'
                     : 'bg-slate-800/50 hover:bg-slate-800 text-slate-400 hover:text-slate-200'
                 }`}
               >
-                <Icon className={`w-4 h-4 ${isActive ? 'text-white' : 'text-slate-400'}`} />
-                <span className="truncate text-[11px]">{cat.label}</span>
+                <div className="flex items-center gap-1">
+                  <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-white' : 'text-slate-400'}`} />
+                  <span className="truncate text-[11px] font-semibold">{cat.label}</span>
+                </div>
+                <span className="text-[9px] font-mono opacity-60 bg-slate-950/40 px-1 rounded border border-white/10">
+                  [{cat.shortcut}]
+                </span>
               </button>
             );
           })}

@@ -6,7 +6,8 @@ import {
   Trash2, 
   Layers, 
   Maximize,
-  Type
+  Type,
+  Ruler
 } from 'lucide-react';
 import { useSimsStore } from '../../store/useSimsStore';
 import type { AnnotationLineStyle } from '../../types/sims';
@@ -69,10 +70,10 @@ export function AnnotationSidebar() {
             <span>Ferramenta de Interação</span>
           </label>
 
-          <div className="grid grid-cols-3 gap-1.5 bg-slate-950/60 p-1.5 rounded-2xl border border-slate-800">
+          <div className="grid grid-cols-2 gap-1.5 bg-slate-950/60 p-1.5 rounded-2xl border border-slate-800">
             <button
               onClick={() => setActiveAnnotationTool('draw')}
-              className={`flex flex-col items-center justify-center gap-1 py-2 px-1 rounded-xl text-[11px] font-semibold transition-all ${
+              className={`flex items-center gap-1.5 py-2 px-2 rounded-xl text-[11px] font-semibold transition-all ${
                 activeAnnotationTool === 'draw'
                   ? 'bg-teal-500 text-slate-950 font-bold shadow-lg shadow-teal-500/20'
                   : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
@@ -83,8 +84,20 @@ export function AnnotationSidebar() {
             </button>
 
             <button
+              onClick={() => setActiveAnnotationTool('ruler')}
+              className={`flex items-center gap-1.5 py-2 px-2 rounded-xl text-[11px] font-semibold transition-all ${
+                activeAnnotationTool === 'ruler'
+                  ? 'bg-teal-500 text-slate-950 font-bold shadow-lg shadow-teal-500/20'
+                  : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
+              }`}
+            >
+              <Ruler className="w-3.5 h-3.5" />
+              <span>Régua / Cota</span>
+            </button>
+
+            <button
               onClick={() => setActiveAnnotationTool('text')}
-              className={`flex flex-col items-center justify-center gap-1 py-2 px-1 rounded-xl text-[11px] font-semibold transition-all ${
+              className={`flex items-center gap-1.5 py-2 px-2 rounded-xl text-[11px] font-semibold transition-all ${
                 activeAnnotationTool === 'text'
                   ? 'bg-teal-500 text-slate-950 font-bold shadow-lg shadow-teal-500/20'
                   : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
@@ -96,7 +109,7 @@ export function AnnotationSidebar() {
 
             <button
               onClick={() => setActiveAnnotationTool('hand')}
-              className={`flex flex-col items-center justify-center gap-1 py-2 px-1 rounded-xl text-[11px] font-semibold transition-all ${
+              className={`flex items-center gap-1.5 py-2 px-2 rounded-xl text-[11px] font-semibold transition-all ${
                 activeAnnotationTool === 'hand'
                   ? 'bg-teal-500 text-slate-950 font-bold shadow-lg shadow-teal-500/20'
                   : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
@@ -110,10 +123,12 @@ export function AnnotationSidebar() {
           <p className="text-[11px] text-slate-400 bg-slate-950/40 p-2.5 rounded-xl border border-slate-800/60">
             {activeAnnotationTool === 'draw' ? (
               <>💡 <strong>Desenhar Zona:</strong> Clique no grid para adicionar vértices e formar um polígono ($P_1, P_2\dots$). Use <strong>Enter</strong> para concluir ou <strong>Esc</strong> para cancelar.</>
+            ) : activeAnnotationTool === 'ruler' ? (
+              <>📏 <strong>Régua / Cota de Medida:</strong> Clique no ponto inicial e arraste até o segundo ponto. Clique novamente ou pressione <strong>Enter</strong> para fixar a medida na tela. Use <strong>Esc</strong> para descartar.</>
             ) : activeAnnotationTool === 'text' ? (
               <>📝 <strong>Texto Livre:</strong> Digite o texto desejado no campo abaixo e clique em qualquer lugar do terreno para fixá-lo.</>
             ) : (
-              <>✋ <strong>Mão de Reposicionamento:</strong> Clique e arraste na tela os rótulos de <strong>Áreas (m²)</strong>, <strong>Textos Livres</strong> ou os textos de <strong>Medidas das Paredes</strong> para posicioná-los livremente!</>
+              <>✋ <strong>Mão de Reposicionamento:</strong> Clique e arraste na tela os rótulos de <strong>Áreas (m²)</strong>, <strong>Cotas de Régua</strong> ou <strong>Textos Livres</strong> para posicioná-los livremente!</>
             )}
           </p>
         </div>

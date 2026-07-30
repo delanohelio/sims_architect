@@ -173,6 +173,18 @@ O JSON gerado deve seguir fielmente esta interface:
       "fontSize": 16,
       "points": [{ "x": 5, "y": 0.5 }],
       "labelPosition": { "x": 5, "y": 0.5 }
+    },
+    {
+      "id": "ann_ruler_1",
+      "type": "ruler",
+      "name": "Medida (4.50m)",
+      "lineStyle": "dashed",
+      "color": "#38BDF8",
+      "points": [
+        { "x": 2, "y": 2 },
+        { "x": 6.5, "y": 2 }
+      ],
+      "labelPosition": { "x": 4.25, "y": 2 }
     }
   ],
   "customTextures": [],

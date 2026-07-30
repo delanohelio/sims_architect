@@ -42,6 +42,17 @@ export const DEFAULT_KEYBINDINGS: Record<ShortcutAction, string> = {
   rotateItem: 'KeyR',
   hammer: 'KeyH',
   toggleGrid: 'KeyG',
+  toolSelect: 'KeyS',
+  toolWall: 'KeyW',
+  toolPaint: 'KeyP',
+  toolFloor: 'KeyF',
+  toolDoorWindow: 'KeyD',
+  catBedroom: 'Digit1',
+  catLiving: 'Digit2',
+  catKitchen: 'Digit3',
+  catBathroom: 'Digit4',
+  catOutdoor: 'Digit5',
+  catCustom: 'Digit6',
 };
 
 export const CATALOG_FURNITURE: FurnitureCatalogItem[] = [
