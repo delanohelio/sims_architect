@@ -65,10 +65,23 @@ export function useAnnotationInteractions() {
       if (activeMode !== 'annotation') return;
 
       if (e.key === 'Escape') {
-        setDraftPoints([]);
-        setSelectedAnnotationId(null);
-        if (activeAnnotationTool !== 'hand') {
-          setActiveAnnotationTool('hand');
+        let hasCanceled = false;
+
+        if (draftPoints.length > 0) {
+          setDraftPoints([]);
+          hasCanceled = true;
+        }
+
+        const currentSelectedAnno = useSimsStore.getState().selectedAnnotationId;
+        if (currentSelectedAnno) {
+          setSelectedAnnotationId(null);
+          hasCanceled = true;
+        }
+
+        if (!hasCanceled) {
+          if (activeAnnotationTool !== 'hand') {
+            setActiveAnnotationTool('hand');
+          }
         }
       } else if (e.key === 'Enter') {
         completeDraftManually();
@@ -83,11 +96,13 @@ export function useAnnotationInteractions() {
     if (activeMode !== 'annotation') return;
 
     if (activeAnnotationTool === 'draw') {
-      const snapX = cursorPos.snapVertexX ?? cursorPos.x;
-      const snapY = cursorPos.snapVertexY ?? cursorPos.y;
+      const rawX = cursorPos.snapVertexX ?? cursorPos.x;
+      const rawY = cursorPos.snapVertexY ?? cursorPos.y;
 
-      if (snapX === null || snapY === null || !cursorPos.isInsideTerrain) return;
+      if (rawX === null || rawY === null || !cursorPos.isInsideTerrain) return;
 
+      const snapX = Number((Math.round(rawX / 0.1) * 0.1).toFixed(2));
+      const snapY = Number((Math.round(rawY / 0.1) * 0.1).toFixed(2));
       const newPoint: Point2D = { x: snapX, y: snapY };
 
       // Se clicar perto do primeiro ponto (distância < 0.6m) e houver pelo menos 3 pontos, fecha o polígono
@@ -105,6 +120,15 @@ export function useAnnotationInteractions() {
           });
           setDraftPoints([]);
           return;
+        }
+      }
+
+      // Validação de Medida Mínima de 0.1m para cada segmento de linha da zona
+      if (draftPoints.length > 0) {
+        const last = draftPoints[draftPoints.length - 1];
+        const distToLast = Math.hypot(snapX - last.x, snapY - last.y);
+        if (distToLast < 0.1) {
+          return; // Ignora se o comprimento da linha for menor que 0.1m (10cm)
         }
       }
 

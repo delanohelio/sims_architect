@@ -106,14 +106,51 @@ export function useBuildInteractions() {
       }
 
       if (e.code === 'Escape') {
-        setSelectedWallId(null);
-        setSelectedDoorWindow(null);
-        cancelPendingDoor();
-        cancelPendingFurnitureItem();
-        setSelectedAnnotationId(null);
+        let hasCanceledAction = false;
 
-        if (activeMode === 'build' && activeBuildTool !== 'select') {
-          setActiveBuildTool('select');
+        if (isDrawingWall || wallStartVertex) {
+          setIsDrawingWall(false);
+          setWallStartVertex(null);
+          hasCanceledAction = true;
+        }
+
+        if (isSelectingFloor || floorStartCell) {
+          setIsSelectingFloor(false);
+          setFloorStartCell(null);
+          hasCanceledAction = true;
+        }
+
+        if (pendingDoor) {
+          cancelPendingDoor();
+          hasCanceledAction = true;
+        }
+
+        if (pendingFurnitureItem) {
+          cancelPendingFurnitureItem();
+          hasCanceledAction = true;
+        }
+
+        if (selectedWallId) {
+          setSelectedWallId(null);
+          hasCanceledAction = true;
+        }
+
+        if (selectedDoorWindow) {
+          setSelectedDoorWindow(null);
+          hasCanceledAction = true;
+        }
+
+        const currentSelectedAnnotation = useSimsStore.getState().selectedAnnotationId;
+        if (currentSelectedAnnotation) {
+          setSelectedAnnotationId(null);
+          hasCanceledAction = true;
+        }
+
+        // SEGUNDO PASSO: Se nada estava em andamento/selecionado, reseta a ferramenta para Mão ('select')
+        if (!hasCanceledAction) {
+          if (activeMode === 'build' && activeBuildTool !== 'select') {
+            setActiveBuildTool('select');
+          }
         }
       }
 

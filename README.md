@@ -9,6 +9,7 @@ O **Sims Architect** é uma aplicação web interativa de arquitetura e design d
 - **Gerenciamento de Estado**: Zustand (`useSimsStore.ts`)
 - **Renderização 2D**: HTML5 Canvas API com escalonamento High-DPI (`useCanvasRenderer.ts`)
 - **Renderização 3D**: Three.js WebGL com sombras PCFShadowMap, iluminação direcional solar e materiais físicos (`Viewport3D.tsx`)
+- **Otimização de Memória**: Descarte estrito de geometrias, materiais e texturas WebGL GPU no desmonte de maquetes 3D e renderização exclusiva por modo
 - **Estilização & UI**: Vanilla CSS + Tailwind CSS v4 com estéticas dark mode futuristas e glassmorphism
 - **Ícones**: Lucide React
 
@@ -20,44 +21,34 @@ O **Sims Architect** é uma aplicação web interativa de arquitetura e design d
 - **Dimensões Customizáveis do Lote**: Sliders em tempo real para ajustar Largura (5m a 60m) e Comprimento (5m a 60m) com badge de área total em $m^2$.
 - **Presets Rápidos de Lote Sims**: Lote Padrão ($15\text{m} \times 30\text{m}$), Urbano ($10\text{m} \times 20\text{m}$), Chalé ($20\text{m} \times 20\text{m}$), Mansão ($25\text{m} \times 40\text{m}$).
 - **Temas de Terreno & Personalização**: *Grama*, *Blueprint*, *Dark Slate*, *Concreto Urbano*, cores customizadas e texturas.
-- **⚙️ Modal de Configuração de Atalhos de Teclado (Com Bloqueio de Duplicadas)**:
-  - **Edição Completa**: Modal interativo que permite configurar **todos os atalhos** do sistema.
-  - **Zero Conflito**: Bloqueia automaticamente qualquer tentativa de atribuir a mesma tecla a duas funções diferentes, exibindo alertas de prevenção de duplicidade.
+- **⚙️ Modal de Configuração de Atalhos de Teclado (Sem Conflitos)**: Bloqueio automático de teclas duplicadas e redefinição personalizada.
 
 ### 2. 🧱 Modo Construção 2D (`build`) & Sistema de Paredes Avançado
 - **Ferramenta Dedicada "Mão (Selecionar)" `[M]`**:
   - Isolamento estrito de funções: na ferramenta de **Paredes `[V]`**, o clique no terreno **apenas desenha novas paredes**.
   - A seleção, o movimento por arrasto $(\Delta x, \Delta y)$ e a edição de paredes no Painel Inspetor ocorrem exclusivamente ao ativar a ferramenta **Mão `[M]`**.
-- **Construção de Paredes por Arrasto a partir de 0,1m (10cm)**:
-  - Resolução de precisão de **0,1m** para desenhar paredes curtas ou extensas com badge de cota métrica flutuante em tempo real.
-- **Edição Numérica Direta do Comprimento Exato**:
-  - Painel **Inspetor de Parede Selecionada** para digitação direta do comprimento em metros (ex: `0.10m`, `2.50m`, `4.80m`, `12.00m`) e espessura ($0,05\text{m} \dots 0,80\text{m}$).
-- **Esquadrias (Portas & Janelas Customizáveis)**:
-  - **Fluxo Interativo de Inserção da Porta em 3 Passos** (Posicionamento, Dobradiça, Giro de Abertura).
-  - **Porta de Correr sem Dobradiça (`door_sliding`)**: Instalação em 1 clique com desenho técnico de 2 painéis e setas `↔`.
-- **Aplicação de Pisos & Pintura Dual-Face**:
-  - Catálogo de texturas (Madeira, Mármore, Azulejo, Slate, Grama, Terra, Cor Sólida, Textura Customizada).
-  - Pintura independente das duas faces da parede (Lado A e Lado B).
+- **Construção de Paredes por Arrasto a partir de 0,1m (10cm)**: Resolução de precisão de **0,1m** sem seleção automática da nova parede para permitir desenho contínuo.
+- **Edição Numérica Direta do Comprimento Exato**: Digitação do comprimento em metros no inspetor de paredes.
+- **Esquadrias (Portas & Janelas Customizáveis)**: Posicionamento técnico com porta de correr (`door_sliding`) e porta pivotante.
 
 ### 3. 🛋️ Modo Compra / Mobiliário (`buy`) & Atalhos Numéricos
-- **Atalhos Rápidos de Categorias (`1` a `6`)**:
-  - `1`: Quarto | `2`: Sala | `3`: Cozinha | `4`: Banheiro | `5`: Exterior | `6`: Customizados.
-- **Móvel Genérico Customizado & Rotação Numérica**:
-  - Configuração de Nome, Categoria, Largura, Profundidade, Altura, Formato (Caixa/Cilindro) e Aparência.
-  - Digitação direta do ângulo de rotação de $0^\circ$ a $360^\circ$ ou rotação por tecla (**R**).
+- **Atalhos Rápidos de Categorias (`1` a `6`)**: Quarto, Sala, Cozinha, Banheiro, Exterior, Customizados.
+- **Móvel Genérico Customizado & Rotação Numérica**: Rotação de $0^\circ$ a $360^\circ$ ou tecla **R**.
 
 ### 4. 🏷️ Menu "Marcação" (Zonas, Áreas, Régua/Cotas e Textos Livres)
-- **📏 Ferramenta Régua / Cota de Medida (`ruler`)**:
-  - Medição métrica entre 2 pontos clicando e puxando o cursor com cota ao vivo (ex: `4.50m`).
-  - Suporte a **Enter** (fixar cota), **Esc** (cancelar) e estilos de linha (Pontilhada, Contínua, Invisível).
-- **Rascunho Poligonal de Zonas ao Vivo**: Pré-visualização ao vivo de vértices ($P_1, P_2, P_3\dots$) e linhas guia com cálculo automático de área em $m^2$.
-- **Inclusão de Textos Livres**: Rótulos de texto customizados com escolha de cor e tamanho de fonte.
-- **Mão de Reposicionamento**: Arraste interativo de rótulos de áreas ($m^2$), cotas de régua e textos livres.
+- **📏 Régua / Cota de Medida e Zonas de Área (Mínimo de 0,1m por Linha)**:
+  - Criação de áreas/polígonos com alinhamento (snap) e restrição mínima de $0,1\text{m}$ ($10\text{cm}$) por segmento de linha.
+  - Medição de cotas de régua entre 2 pontos com cálculo em tempo real.
 
-### 5. 📄 Exportação HD (PNG/PDF) & Prancha Técnica
-- **Fidelidade Total de Cores & Texturas**: Renderização offscreen 4K/HD perfeita.
-- **Auto-Fit Maximizados**: Terrenos verticais orientados a $90^\circ$ na prancha horizontal (até **95% da página A4**).
-- **Seleção do Estilo do Fundo**: Escolha entre **Fundo Tema do Terreno** ou **Fundo Branco Limpo**.
+### 5. ⚡ Otimização Extrema de Memória & Alternância 2D / 3D com Tela de Carregamento
+- **Gerenciamento Inteligente da DOM & GPU**:
+  - Apenas a visualização ativa (Planta Baixa 2D ou Maquete 3D) permanece montada no sistema.
+  - Ao mudar para 2D, a maquete 3D é completamente desmontada e o Three.js executa percurso de objetos com `geometry.dispose()`, `material.dispose()`, `texture.dispose()` e `renderer.forceContextLoss()`.
+- **Tela de Transição e Loading**: Feedback visual com animação enquanto a memória WebGL é purgada e reorganizada.
+
+### 6. ⌨️ Hierarquia da Tecla ESC em 2 Passos
+- **1º Clique no ESC**: Cancela o rascunho em andamento, esquadria pendente, móvel suspenso ou elemento selecionado, **mantendo a ferramenta atual ativa**.
+- **2º Clique no ESC**: Se não houver ação em andamento nem item selecionado, alterna a ferramenta ativa para a **Mão / Seleção (`select` / `hand`)**.
 
 ---
 
@@ -78,14 +69,9 @@ O **Sims Architect** é uma aplicação web interativa de arquitetura e design d
 | **Portas & Janelas** | `J` | Modo Construção |
 | **Marreta / Borracha** | `H` / `Delete` | Modo Construção |
 | **Rotacionar Móvel (+45°)** | `R` | Modo Compra |
-| **Compra: Quarto** | `1` | Modo Compra |
-| **Compra: Sala** | `2` | Modo Compra |
-| **Compra: Cozinha** | `3` | Modo Compra |
-| **Compra: Banheiro** | `4` | Modo Compra |
-| **Compra: Exterior** | `5` | Modo Compra |
-| **Compra: Customizado** | `6` | Modo Compra |
-| **Concluir Rascunho / Régua** | `Enter` | Geral |
-| **Cancelar Rascunho / Régua** | `Esc` | Geral |
+| **Compra: Categorias** | `1` a `6` | Modo Compra |
+| **Concluir Polígono / Medida** | `Enter` | Geral |
+| **Cancelar Ação (1º) / Ir para Mão (2º)** | `Esc` | Geral |
 
 ---
 

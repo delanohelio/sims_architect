@@ -52,7 +52,6 @@ export function Header() {
     activeMode, 
     setMode, 
     viewMode, 
-    setViewMode, 
     setIsSetupModalOpen, 
     centerTerrainInViewport 
   } = useSimsStore();
@@ -122,7 +121,7 @@ export function Header() {
         {/* Alternador 2D / 3D */}
         <div className="flex items-center gap-1 bg-slate-950/80 p-1 rounded-xl border border-slate-800">
           <button
-            onClick={() => setViewMode('2d')}
+            onClick={() => useSimsStore.getState().setViewModeWithTransition('2d')}
             className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold transition-all ${
               viewMode === '2d'
                 ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/20'
@@ -133,7 +132,7 @@ export function Header() {
             <span>2D Planta</span>
           </button>
           <button
-            onClick={() => setViewMode('3d')}
+            onClick={() => useSimsStore.getState().setViewModeWithTransition('3d')}
             className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold transition-all ${
               viewMode === '3d'
                 ? 'bg-cyan-500 text-white shadow-md shadow-cyan-500/20'

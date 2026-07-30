@@ -211,7 +211,9 @@ interface SimsState {
 
   // ACTIONS
   setMode: (mode: AppMode) => void;
+  isViewTransitioning: boolean;
   setViewMode: (mode: ViewMode3D) => void;
+  setViewModeWithTransition: (mode: ViewMode3D) => void;
   setActiveBuildTool: (tool: BuildTool) => void;
   setWallViewMode: (mode: WallViewMode) => void;
   setIsSetupModalOpen: (open: boolean) => void;
@@ -341,6 +343,15 @@ export const useSimsStore = create<SimsState>()(
     (set, get) => ({
       activeMode: 'settings',
       viewMode: '2d',
+      isViewTransitioning: false,
+      setViewModeWithTransition: (targetMode) => {
+        const { viewMode } = get();
+        if (viewMode === targetMode) return;
+        set({ isViewTransitioning: true });
+        setTimeout(() => {
+          set({ viewMode: targetMode, isViewTransitioning: false });
+        }, 250);
+      },
       terrain: DEFAULT_TERRAIN,
       viewState: DEFAULT_VIEWSTATE,
       gridSettings: DEFAULT_GRIDSETTINGS,

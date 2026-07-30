@@ -16,6 +16,7 @@ export function CanvasArea() {
     viewState,
     gridSettings,
     viewMode,
+    isViewTransitioning,
     activeMode,
     activeBuildTool,
     activeAnnotationTool,
@@ -170,6 +171,20 @@ export function CanvasArea() {
     const delta = e.deltaY < 0 ? 0.12 : -0.12;
     setZoom(viewState.zoom + delta, focalX, focalY);
   };
+
+  if (isViewTransitioning) {
+    return (
+      <div className="relative w-full h-full flex flex-col items-center justify-center bg-slate-950 text-slate-100 select-none">
+        <div className="p-6 rounded-3xl bg-slate-900/90 backdrop-blur-xl border border-slate-800 shadow-2xl flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-3 border-amber-400 border-t-transparent rounded-full animate-spin" />
+          <span className="text-xs font-bold text-slate-200">
+            {viewMode === '2d' ? 'Gerando Maquete 3D Interativa...' : 'Alternando para Planta Baixa 2D...'}
+          </span>
+          <span className="text-[11px] text-slate-400">Liberando e otimizando memória GPU WebGL</span>
+        </div>
+      </div>
+    );
+  }
 
   if (viewMode === '3d') {
     return (

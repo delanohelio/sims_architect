@@ -587,8 +587,42 @@ export function Viewport3D() {
     return () => {
       cancelAnimationFrame(animationFrameId);
       window.removeEventListener('resize', handleResize);
+
+      // DESCARTE COMPLETO DE MEMÓRIA DA CENA 3D (GEOMETRIAS, MATERIAIS E TEXTURAS GPU)
+      scene.traverse((object) => {
+        if ((object as THREE.Mesh).isMesh) {
+          const mesh = object as THREE.Mesh;
+          if (mesh.geometry) {
+            mesh.geometry.dispose();
+          }
+          if (mesh.material) {
+            if (Array.isArray(mesh.material)) {
+              mesh.material.forEach((mat) => {
+                if ((mat as THREE.MeshStandardMaterial).map) {
+                  (mat as THREE.MeshStandardMaterial).map?.dispose();
+                }
+                mat.dispose();
+              });
+            } else {
+              if ((mesh.material as THREE.MeshStandardMaterial).map) {
+                (mesh.material as THREE.MeshStandardMaterial).map?.dispose();
+              }
+              mesh.material.dispose();
+            }
+          }
+        }
+      });
+
+      // Limpa todas as texturas em cache GPU
+      textureCacheRef.current.forEach((tex) => {
+        tex.dispose();
+      });
+      textureCacheRef.current.clear();
+
       controls.dispose();
+      renderer.forceContextLoss();
       renderer.dispose();
+
       if (container.contains(renderer.domElement)) {
         container.removeChild(renderer.domElement);
       }
