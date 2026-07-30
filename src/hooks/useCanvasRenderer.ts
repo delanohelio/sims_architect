@@ -679,9 +679,21 @@ export function useCanvasRenderer(
 
         if (activeAnnotationTool === 'ruler' && dpts.length === 1 && cursorPos.x !== null && cursorPos.y !== null) {
           const p1 = dpts[0];
-          const px = cursorPos.snapVertexX ?? cursorPos.x;
-          const py = cursorPos.snapVertexY ?? cursorPos.y;
-          const p2 = { x: px, y: py };
+          const { walls: allWalls } = useSimsStore.getState();
+
+          // Snap de 0,1m + atração magnética para vértices de parede
+          let rulerSnapX = Number((Math.round(cursorPos.x / 0.1) * 0.1).toFixed(2));
+          let rulerSnapY = Number((Math.round(cursorPos.y / 0.1) * 0.1).toFixed(2));
+          for (const w of allWalls) {
+            if (Math.hypot(cursorPos.x - w.x1, cursorPos.y - w.y1) <= 0.18) {
+              rulerSnapX = w.x1; rulerSnapY = w.y1; break;
+            }
+            if (Math.hypot(cursorPos.x - w.x2, cursorPos.y - w.y2) <= 0.18) {
+              rulerSnapX = w.x2; rulerSnapY = w.y2; break;
+            }
+          }
+
+          const p2 = { x: rulerSnapX, y: rulerSnapY };
           const distMeters = Math.hypot(p2.x - p1.x, p2.y - p1.y);
 
           const p1Px = { x: p1.x * cellSize, y: p1.y * cellSize };
@@ -722,6 +734,15 @@ export function useCanvasRenderer(
 
           ctx.moveTo(p2Px.x - Math.cos(perpAngle) * tickLen, p2Px.y - Math.sin(perpAngle) * tickLen);
           ctx.lineTo(p2Px.x + Math.cos(perpAngle) * tickLen, p2Px.y + Math.sin(perpAngle) * tickLen);
+          ctx.stroke();
+
+          // Indicador de snap no ponto de destino
+          ctx.fillStyle = 'rgba(56, 189, 248, 0.6)';
+          ctx.strokeStyle = '#FFFFFF';
+          ctx.lineWidth = 1.5 / viewState.zoom;
+          ctx.beginPath();
+          ctx.arc(p2Px.x, p2Px.y, 5 / viewState.zoom, 0, Math.PI * 2);
+          ctx.fill();
           ctx.stroke();
 
           // Badge com a distância em tempo real

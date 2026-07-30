@@ -183,15 +183,17 @@ export function useAnnotationInteractions() {
         }
       }
     } else if (activeAnnotationTool === 'ruler') {
-      const px = cursorPos.snapVertexX ?? cursorPos.x;
-      const py = cursorPos.snapVertexY ?? cursorPos.y;
-      if (px === null || py === null || !cursorPos.isInsideTerrain) return;
+      if (cursorPos.x === null || cursorPos.y === null || !cursorPos.isInsideTerrain) return;
+
+      const wallSnap = findWallVertexSnap(cursorPos.x, cursorPos.y);
+      const rulerSnapX = wallSnap ? wallSnap.x : Number((Math.round(cursorPos.x / 0.1) * 0.1).toFixed(2));
+      const rulerSnapY = wallSnap ? wallSnap.y : Number((Math.round(cursorPos.y / 0.1) * 0.1).toFixed(2));
 
       if (draftPoints.length === 0) {
-        setDraftPoints([{ x: Number(px.toFixed(2)), y: Number(py.toFixed(2)) }]);
+        setDraftPoints([{ x: rulerSnapX, y: rulerSnapY }]);
       } else {
         const p1 = draftPoints[0];
-        const p2 = { x: Number(px.toFixed(2)), y: Number(py.toFixed(2)) };
+        const p2 = { x: rulerSnapX, y: rulerSnapY };
         const dist = Math.hypot(p2.x - p1.x, p2.y - p1.y);
 
         if (dist >= 0.1) {
