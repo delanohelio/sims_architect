@@ -38,17 +38,21 @@ O **Sims Architect** é uma aplicação web interativa de arquitetura e design d
 
 ### 4. 🏷️ Menu "Marcação" (Zonas, Áreas, Varinha Mágica e Régua)
 - **🎯 Snap de 0,1m em Qualquer Quadrante & Atração Magnética de Paredes**:
-  - Resolução sub-métrica de $0,1\text{m}$ em qualquer posição do terreno para alinhamento fino de áreas e cotas de régua.
+  - Resolução sub-métrica de $0,1\text{m}$ em qualquer posição do terreno, incluindo dentro do mesmo quadrante de 1m, para alinhamento fino de áreas e cotas de régua.
   - Atraimento magnético automático para cantos e vértices de paredes existentes ($\le 0,18\text{m}$).
+  - Limiar de auto-fechamento de polígono reduzido a $0,15\text{m}$ para suportar zonas com vértices muito próximos.
 - **🪄 Varinha Mágica (Auto-Detecção Automática de Ambientes em 1 Clique)**:
-  - 🧱 **Baseado em Paredes (Cômodo Fechado)**: Algoritmo Flood Fill 2D que reconhece o perímetro exato do cômodo limitado por paredes ao clicar no seu interior.
-  - 🎨 **Baseado em Pisos Conectados**: Reconhece a mancha inteira de ladrilhos contíguos aplicados ao clicar sobre um piso.
+  - 🧱 **Baseado em Paredes (Interseção de Segmentos)**: Constrói um grafo de interseções entre todas as paredes (e a borda do terreno), identifica os polígonos formados e seleciona o menor que contém o ponto clicado. **Paredes não precisam compartilhar endpoints** — o sistema detecta cruzamentos geométricos e extensões curtas automaticamente. Uma mesma parede pode participar de múltiplas áreas.
+  - 🎨 **Baseado em Pisos (Mesmo Tipo/Cor)**: Agrupa apenas pisos contíguos com **mesma textura (`textureId`), cor e URL personalizada** — pisos de tipos diferentes formam áreas separadas.
 
 ### 5. ⚡ Otimização Extrema de Memória & Alternância 2D / 3D com Tela de Carregamento
 - **Gerenciamento Inteligente da DOM & GPU**: Apenas a visão ativa (Planta 2D ou Maquete 3D) permanece montada no DOM com descarte estrito de memória WebGL.
 - **Tela de Transição e Loading**: Feedback visual com animação enquanto a memória WebGL é purgada e reorganizada.
 
-### 6. ⌨️ Hierarquia da Tecla ESC em 2 Passos
+### 6. 🔄 Reset Automático de Ferramentas ao Trocar de Modo
+- Ao alternar entre modos (ex: Construção → Compras → Marcação), a ferramenta ativa do modo anterior é automaticamente desativada e resetada para o estado padrão (Mão/Seleção).
+
+### 7. ⌨️ Hierarquia da Tecla ESC em 2 Passos
 - **1º Clique no ESC**: Cancela o rascunho em andamento, esquadria pendente, móvel suspenso ou elemento selecionado, **mantendo a ferramenta atual ativa**.
 - **2º Clique no ESC**: Se não houver ação em andamento nem item selecionado, alterna a ferramenta ativa para a **Mão / Seleção (`select` / `hand`)**.
 

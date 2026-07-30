@@ -116,10 +116,10 @@ export function useAnnotationInteractions() {
       const snapY = wallSnap ? wallSnap.y : Number((Math.round(cursorPos.y / 0.1) * 0.1).toFixed(2));
       const newPoint: Point2D = { x: snapX, y: snapY };
 
-      // Se clicar perto do primeiro ponto (distância < 0.6m) e houver pelo menos 3 pontos, fecha o polígono
+      // Se clicar perto do primeiro ponto (distância < 0.15m) e houver pelo menos 3 pontos, fecha o polígono
       if (draftPoints.length >= 3) {
         const first = draftPoints[0];
-        if (Math.hypot(snapX - first.x, snapY - first.y) < 0.6) {
+        if (Math.hypot(snapX - first.x, snapY - first.y) < 0.15) {
           const centroid = calculatePolygonCentroid(draftPoints);
           addAnnotation({
             type: 'zone',
@@ -134,11 +134,12 @@ export function useAnnotationInteractions() {
         }
       }
 
-      // Validação de Medida Mínima de 0.1m para cada segmento de linha da zona
+      // Validação de Medida Mínima de 0.1m (10cm) para cada segmento de linha da zona
+      // Usa 0.09 como margem de tolerância de arredondamento
       if (draftPoints.length > 0) {
         const last = draftPoints[draftPoints.length - 1];
         const distToLast = Math.hypot(snapX - last.x, snapY - last.y);
-        if (distToLast < 0.1) {
+        if (distToLast < 0.09) {
           return; // Ignora se o comprimento da linha for menor que 0.1m (10cm)
         }
       }

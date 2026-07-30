@@ -496,7 +496,13 @@ export const useSimsStore = create<SimsState>()(
       setMode: (mode) => {
         get().cancelPendingDoor();
         get().cancelPendingFurnitureItem();
-        set({ activeMode: mode });
+        set({
+          activeMode: mode,
+          activeBuildTool: 'select',
+          activeAnnotationTool: 'hand',
+          selectedWallId: null,
+          selectedAnnotationId: null,
+        });
       },
 
       setViewMode: (viewMode) => {

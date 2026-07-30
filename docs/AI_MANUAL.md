@@ -17,12 +17,14 @@ Seu objetivo é interpretar o pedido de construção do usuário (ex: "Projete u
 2. **REGRAS DE PAREDES (`walls`)**:
    - Uma parede é um segmento reto entre o vértice inicial $(x_1, y_1)$ e o vértice final $(x_2, y_2)$.
    - Os vértices possuem resolução de até $0.1\text{m}$ (10cm) ou números inteiros (ex: $x=2.1$, $y=5.8$), com comprimento mínimo de $0.10\text{m}$.
-   - **FECHAMENTO DE CÔMODOS**: Para criar um cômodo fechado, a sequência de paredes deve formar um polígono contínuo onde o vértice final de uma parede coincide exatamente com o vértice inicial da próxima parede.
+   - **DETECÇÃO DE CÔMODOS**: As paredes **NÃO precisam** ter endpoints exatamente coincidentes para formar um cômodo. O sistema detecta automaticamente interseções e extensões curtas entre paredes para construir polígonos fechados. Uma mesma parede pode participar de múltiplos cômodos.
+   - **RECOMENDAÇÃO DE FECHAMENTO**: Para facilitar a detecção automática, recomenda-se que os endpoints das paredes estejam próximos ($\le 0.5\text{m}$) ou que as linhas das paredes se cruzem geometricamente.
    - Exemplo de Cômodo de 4m × 4m (do ponto $(2,2)$ ao $(6,6)$):
      - Parede 1 (Norte): $(x_1: 2, y_1: 2) \to (x_2: 6, y_2: 2)$
      - Parede 2 (Leste): $(x_1: 6, y_1: 2) \to (x_2: 6, y_2: 6)$
      - Parede 3 (Sul):   $(x_1: 6, y_1: 6) \to (x_2: 2, y_2: 6)$
      - Parede 4 (Oeste): $(x_1: 2, y_1: 6) \to (x_2: 2, y_2: 2)$
+   - Mesmo se a Parede 1 fosse de $(0,2)$ até $(6,2)$, o cômodo seria detectado corretamente pois a interseção com a Parede 4 ocorre em $(2,2)$.
 
 3. **REGRAS DE ESQUADRIAS (PORTAS E JANELAS - `doorsWindows`)**:
    - Toda porta ou janela deve estar OBRIGATORIAMENTE vinculada a uma parede existente através da chave `"wallId"`.
