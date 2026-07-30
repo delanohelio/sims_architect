@@ -31,6 +31,7 @@ const CATEGORIES: { id: FurnitureCategory; label: string; shortcut: string; icon
 
 export function BuySidebar() {
   const {
+    keybindings,
     selectedBuyCategory,
     setSelectedBuyCategory,
     pendingFurnitureItem,
@@ -210,6 +211,17 @@ export function BuySidebar() {
           {CATEGORIES.map((cat) => {
             const Icon = cat.icon;
             const isActive = selectedBuyCategory === cat.id;
+            let code = '';
+            switch (cat.id) {
+              case 'bedroom': code = keybindings.catBedroom; break;
+              case 'living': code = keybindings.catLiving; break;
+              case 'kitchen': code = keybindings.catKitchen; break;
+              case 'bathroom': code = keybindings.catBathroom; break;
+              case 'outdoor': code = keybindings.catOutdoor; break;
+              case 'custom': code = keybindings.catCustom; break;
+            }
+            const scKey = code ? code.replace('Digit', '').replace('Key', '').toUpperCase() : '';
+
             return (
               <button
                 key={cat.id}
@@ -224,9 +236,11 @@ export function BuySidebar() {
                   <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-white' : 'text-slate-400'}`} />
                   <span className="truncate text-[11px] font-semibold">{cat.label}</span>
                 </div>
-                <span className="text-[9px] font-mono opacity-60 bg-slate-950/40 px-1 rounded border border-white/10">
-                  [{cat.shortcut}]
-                </span>
+                {scKey && (
+                  <span className="text-[9px] font-mono opacity-60 bg-slate-950/40 px-1 rounded border border-white/10">
+                    [{scKey}]
+                  </span>
+                )}
               </button>
             );
           })}

@@ -373,16 +373,18 @@ export function SettingsSidebar() {
         <div className="space-y-3 pt-2 border-t border-slate-800/80">
           <label className="text-xs font-bold text-white flex items-center justify-between">
             <span className="flex items-center gap-2">
-              <Keyboard className="w-4 h-4 text-emerald-400" />
+              <Keyboard className="w-4 h-4 text-amber-400" />
               <span>Atalhos de Teclado Personalizados</span>
             </span>
-            <button
-              onClick={useSimsStore.getState().resetKeybindings}
-              className="text-[10px] text-slate-400 hover:text-emerald-400 underline transition-colors"
-            >
-              Restaurar Padrão
-            </button>
           </label>
+
+          <button
+            onClick={() => useSimsStore.getState().setIsKeybindingsModalOpen(true)}
+            className="w-full py-2.5 px-4 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white font-bold text-xs rounded-xl shadow-lg shadow-amber-500/20 transition-all flex items-center justify-center gap-2"
+          >
+            <Keyboard className="w-4 h-4" />
+            <span>Editar Todos os Atalhos (Sem Conflitos)</span>
+          </button>
 
           <KeybindingsPanel />
         </div>
@@ -392,8 +394,9 @@ export function SettingsSidebar() {
 }
 
 function KeybindingsPanel() {
-  const { keybindings, setKeybinding } = useSimsStore();
+  const { keybindings, setKeybinding, setIsKeybindingsModalOpen } = useSimsStore();
   const [listeningAction, setListeningAction] = useState<ShortcutAction | null>(null);
+  const [inlineConflict, setInlineConflict] = useState<string | null>(null);
 
   const shortcutLabels: Record<ShortcutAction, string> = {
     zoomIn: 'Aumentar Zoom (+)',
@@ -417,8 +420,16 @@ function KeybindingsPanel() {
     catCustom: 'Compra: Categoria Customizado',
   };
 
+  const formatKeyName = (code: string) => {
+    if (!code) return '-';
+    if (code.startsWith('Key')) return code.replace('Key', '').toUpperCase();
+    if (code.startsWith('Digit')) return code.replace('Digit', '');
+    return code;
+  };
+
   const handleStartListening = (action: ShortcutAction) => {
     setListeningAction(action);
+    setInlineConflict(null);
 
     const onKeyDown = (e: KeyboardEvent) => {
       e.preventDefault();
@@ -428,7 +439,12 @@ function KeybindingsPanel() {
         window.removeEventListener('keydown', onKeyDown);
         return;
       }
-      setKeybinding(action, e.code);
+      const success = setKeybinding(action, e.code);
+      if (!success) {
+        setInlineConflict(`A tecla [ ${formatKeyName(e.code)} ] já está em uso por outro atalho.`);
+      } else {
+        setInlineConflict(null);
+      }
       setListeningAction(null);
       window.removeEventListener('keydown', onKeyDown);
     };
@@ -438,27 +454,40 @@ function KeybindingsPanel() {
 
   return (
     <div className="space-y-2 bg-slate-950/60 p-3 rounded-2xl border border-slate-800 text-xs">
+      {inlineConflict && (
+        <div className="p-2 bg-rose-950/80 border border-rose-800/80 rounded-xl text-[11px] text-rose-300 font-semibold mb-2">
+          ⚠️ {inlineConflict}
+        </div>
+      )}
+
       {Object.entries(keybindings).map(([actionKey, code]) => {
         const action = actionKey as ShortcutAction;
         const isListening = listeningAction === action;
-        const displayKey = code.replace('Key', '').toUpperCase();
+        const displayKey = formatKeyName(code);
 
         return (
-          <div key={action} className="flex items-center justify-between py-1 border-b border-slate-900 last:border-0">
-            <span className="text-slate-300">{shortcutLabels[action] || action}</span>
+          <div key={action} className="flex items-center justify-between py-1 border-b border-slate-900 last:border-0 gap-2">
+            <span className="text-slate-300 truncate">{shortcutLabels[action] || action}</span>
             <button
               onClick={() => handleStartListening(action)}
-              className={`px-2.5 py-1 rounded-lg text-[11px] font-mono font-bold transition-all border ${
+              className={`px-2.5 py-1 rounded-lg text-[11px] font-mono font-bold transition-all border shrink-0 ${
                 isListening
-                  ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500 animate-pulse'
-                  : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700'
+                  ? 'bg-amber-500/20 text-amber-300 border-amber-500 animate-pulse'
+                  : 'bg-slate-800 hover:bg-slate-700 text-amber-400 border-slate-700'
               }`}
             >
-              {isListening ? 'Pressione a tecla...' : displayKey}
+              {isListening ? 'Pressione...' : `[ ${displayKey} ]`}
             </button>
           </div>
         );
       })}
+
+      <button
+        onClick={() => setIsKeybindingsModalOpen(true)}
+        className="w-full mt-3 py-1.5 px-3 bg-slate-800 hover:bg-slate-700 text-amber-400 text-xs font-semibold rounded-xl border border-slate-700 transition-colors"
+      >
+        Ver Todos os Atalhos em Tela Cheia ↗
+      </button>
     </div>
   );
 }

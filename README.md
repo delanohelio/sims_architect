@@ -20,12 +20,14 @@ O **Sims Architect** é uma aplicação web interativa de arquitetura e design d
 - **Dimensões Customizáveis do Lote**: Sliders em tempo real para ajustar Largura (5m a 60m) e Comprimento (5m a 60m) com badge de área total em $m^2$.
 - **Presets Rápidos de Lote Sims**: Lote Padrão ($15\text{m} \times 30\text{m}$), Urbano ($10\text{m} \times 20\text{m}$), Chalé ($20\text{m} \times 20\text{m}$), Mansão ($25\text{m} \times 40\text{m}$).
 - **Temas de Terreno & Personalização**: *Grama*, *Blueprint*, *Dark Slate*, *Concreto Urbano*, cores customizadas e texturas.
-- **Painel de Atalhos de Teclado Personalizados**: Permite re-vincular qualquer tecla para as ferramentas de Construção, categorias do Modo Compra, Zoom, Rotação e Marreta.
+- **⚙️ Modal de Configuração de Atalhos de Teclado (Com Bloqueio de Duplicadas)**:
+  - **Edição Completa**: Modal interativo que permite configurar **todos os atalhos** do sistema.
+  - **Zero Conflito**: Bloqueia automaticamente qualquer tentativa de atribuir a mesma tecla a duas funções diferentes, exibindo alertas de prevenção de duplicidade.
 
 ### 2. 🧱 Modo Construção 2D (`build`) & Sistema de Paredes Avançado
-- **Ferramenta Dedicada "Mão (Selecionar)" `[S]`**:
-  - Isolamento estrito de funções: na ferramenta de **Paredes `[W]`**, o clique no terreno **apenas desenha novas paredes**.
-  - A seleção, o movimento por arrasto $(\Delta x, \Delta y)$ e a edição de paredes no Painel Inspetor ocorrem exclusivamente ao ativar a ferramenta **Mão `[S]`**.
+- **Ferramenta Dedicada "Mão (Selecionar)" `[M]`**:
+  - Isolamento estrito de funções: na ferramenta de **Paredes `[V]`**, o clique no terreno **apenas desenha novas paredes**.
+  - A seleção, o movimento por arrasto $(\Delta x, \Delta y)$ e a edição de paredes no Painel Inspetor ocorrem exclusivamente ao ativar a ferramenta **Mão `[M]`**.
 - **Construção de Paredes por Arrasto a partir de 0,1m (10cm)**:
   - Resolução de precisão de **0,1m** para desenhar paredes curtas ou extensas com badge de cota métrica flutuante em tempo real.
 - **Edição Numérica Direta do Comprimento Exato**:
@@ -46,11 +48,9 @@ O **Sims Architect** é uma aplicação web interativa de arquitetura e design d
 
 ### 4. 🏷️ Menu "Marcação" (Zonas, Áreas, Régua/Cotas e Textos Livres)
 - **📏 Ferramenta Régua / Cota de Medida (`ruler`)**:
-  - Permite medir distâncias métricas entre dois pontos clicando e puxando o cursor com pré-visualização ao vivo da distância (ex: `4.50m`).
-  - Tecla **Enter**: Salva e fixa a cota na tela.
-  - Tecla **Esc**: Cancela e descarta a medida.
-  - Estilos de linha customizáveis: **Pontilhada** (`dashed`), **Contínua** (`solid`) ou **Invisível** (`invisible`).
-- **Rascunho Poligonal de Zonas ao Vivo**: Pré-visualização ao vivo de vértices ($P_1, P_2, P_3\dots$) e linhas guia com cálculo automático de área em $m^2$. Suporte a **Enter** (concluir) e **Esc** (cancelar).
+  - Medição métrica entre 2 pontos clicando e puxando o cursor com cota ao vivo (ex: `4.50m`).
+  - Suporte a **Enter** (fixar cota), **Esc** (cancelar) e estilos de linha (Pontilhada, Contínua, Invisível).
+- **Rascunho Poligonal de Zonas ao Vivo**: Pré-visualização ao vivo de vértices ($P_1, P_2, P_3\dots$) e linhas guia com cálculo automático de área em $m^2$.
 - **Inclusão de Textos Livres**: Rótulos de texto customizados com escolha de cor e tamanho de fonte.
 - **Mão de Reposicionamento**: Arraste interativo de rótulos de áreas ($m^2$), cotas de régua e textos livres.
 
@@ -61,26 +61,31 @@ O **Sims Architect** é uma aplicação web interativa de arquitetura e design d
 
 ---
 
-## ⌨️ Tabela de Atalhos de Teclado Padrão
+## ⌨️ Tabela de Atalhos de Teclado Padrão (100% Sem Conflitos)
 
-| Ação | Tecla Padrão | Descrição |
+| Ação | Tecla Padrão | Categoria |
 | :--- | :---: | :--- |
-| **Mão (Selecionar & Mover)** | `S` | Ativa a ferramenta Mão para selecionar/arrastar paredes |
-| **Construir Parede** | `W` | Ativa o modo de desenho de paredes |
-| **Pintar Parede** | `P` | Ativa a pintura dual-face de paredes |
-| **Aplicação de Pisos** | `F` | Ativa a ferramenta de aplicação de pisos |
-| **Portas & Janelas** | `D` | Ativa o catálogo de esquadrias |
-| **Marreta / Borracha** | `H` / `Delete` | Ativa a ferramenta de remoção |
-| **Compra: Quarto** | `1` | Seleciona a aba de móveis do Quarto |
-| **Compra: Sala** | `2` | Seleciona a aba de móveis da Sala |
-| **Compra: Cozinha** | `3` | Seleciona a aba de móveis da Cozinha |
-| **Compra: Banheiro** | `4` | Seleciona a aba de móveis do Banheiro |
-| **Compra: Exterior** | `5` | Seleciona a aba de decoração exterior |
-| **Compra: Customizado** | `6` | Seleciona os móveis customizados salvos |
-| **Rotacionar Móvel** | `R` | Rotaciona o móvel em +45° |
-| **Alternar Grid** | `G` | Liga/Desliga a exibição do grid métrico |
-| **Concluir Rascunho / Régua** | `Enter` | Conclui a zona ou fixa a régua de cota |
-| **Cancelar Rascunho / Régua** | `Esc` | Descarta o rascunho de zona ou régua em andamento |
+| **Aumentar Zoom** | `Z` | Navegação / Câmera |
+| **Diminuir Zoom** | `C` | Navegação / Câmera |
+| **Resetar Zoom (100%)** | `X` | Navegação / Câmera |
+| **Girar Câmera Anti-Horário** | `Q` | Navegação / Câmera |
+| **Girar Câmera Horário** | `E` | Navegação / Câmera |
+| **Alternar Grid Métrico** | `G` | Navegação / Câmera |
+| **Mão (Selecionar / Mover)** | `M` | Modo Construção |
+| **Construir Parede** | `V` | Modo Construção |
+| **Pintar Parede** | `T` | Modo Construção |
+| **Aplicação de Pisos** | `L` | Modo Construção |
+| **Portas & Janelas** | `J` | Modo Construção |
+| **Marreta / Borracha** | `H` / `Delete` | Modo Construção |
+| **Rotacionar Móvel (+45°)** | `R` | Modo Compra |
+| **Compra: Quarto** | `1` | Modo Compra |
+| **Compra: Sala** | `2` | Modo Compra |
+| **Compra: Cozinha** | `3` | Modo Compra |
+| **Compra: Banheiro** | `4` | Modo Compra |
+| **Compra: Exterior** | `5` | Modo Compra |
+| **Compra: Customizado** | `6` | Modo Compra |
+| **Concluir Rascunho / Régua** | `Enter` | Geral |
+| **Cancelar Rascunho / Régua** | `Esc` | Geral |
 
 ---
 

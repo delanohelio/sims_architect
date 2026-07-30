@@ -109,41 +109,41 @@ export function useBuildInteractions() {
         setSelectedWallId(null);
       }
 
-      // Atalhos de Ferramentas de Construção
-      if (e.code === kb.toolSelect || e.code === 'KeyS') {
+      // Atalhos Dinâmicos de Ferramentas de Construção
+      if (e.code === kb.toolSelect) {
         setMode('build');
         setActiveBuildTool('select');
-      } else if (e.code === kb.toolWall || e.code === 'KeyW') {
+      } else if (e.code === kb.toolWall) {
         setMode('build');
         setActiveBuildTool('wall');
-      } else if (e.code === kb.toolPaint || e.code === 'KeyP') {
+      } else if (e.code === kb.toolPaint) {
         setMode('build');
         setActiveBuildTool('wall_paint');
-      } else if (e.code === kb.toolFloor || e.code === 'KeyF') {
+      } else if (e.code === kb.toolFloor) {
         setMode('build');
         setActiveBuildTool('floor');
-      } else if (e.code === kb.toolDoorWindow || e.code === 'KeyD') {
+      } else if (e.code === kb.toolDoorWindow) {
         setMode('build');
         setActiveBuildTool('door_window');
       }
 
-      // Atalhos de Categorias do Modo Compra
-      if (e.code === kb.catBedroom || e.code === 'Digit1') {
+      // Atalhos Dinâmicos de Categorias do Modo Compra
+      if (e.code === kb.catBedroom) {
         setMode('buy');
         store.setSelectedBuyCategory('bedroom');
-      } else if (e.code === kb.catLiving || e.code === 'Digit2') {
+      } else if (e.code === kb.catLiving) {
         setMode('buy');
         store.setSelectedBuyCategory('living');
-      } else if (e.code === kb.catKitchen || e.code === 'Digit3') {
+      } else if (e.code === kb.catKitchen) {
         setMode('buy');
         store.setSelectedBuyCategory('kitchen');
-      } else if (e.code === kb.catBathroom || e.code === 'Digit4') {
+      } else if (e.code === kb.catBathroom) {
         setMode('buy');
         store.setSelectedBuyCategory('bathroom');
-      } else if (e.code === kb.catOutdoor || e.code === 'Digit5') {
+      } else if (e.code === kb.catOutdoor) {
         setMode('buy');
         store.setSelectedBuyCategory('outdoor');
-      } else if (e.code === kb.catCustom || e.code === 'Digit6') {
+      } else if (e.code === kb.catCustom) {
         setMode('buy');
         store.setSelectedBuyCategory('custom');
       }

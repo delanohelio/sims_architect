@@ -2,6 +2,7 @@ import { Header } from './components/layout/Header';
 import { Sidebar } from './components/layout/Sidebar';
 import { CanvasArea } from './components/canvas/CanvasArea';
 import { SetupModal } from './components/ui/SetupModal';
+import { KeybindingsModal } from './components/modals/KeybindingsModal';
 import { useKeyboardNavigation } from './hooks/useKeyboardNavigation';
 
 export function App() {
@@ -20,6 +21,9 @@ export function App() {
 
       {/* Modal de Configuração de Novo Terreno */}
       <SetupModal />
+
+      {/* Modal de Configuração de Atalhos de Teclado */}
+      <KeybindingsModal />
     </div>
   );
 }

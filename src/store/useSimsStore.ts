@@ -42,11 +42,11 @@ export const DEFAULT_KEYBINDINGS: Record<ShortcutAction, string> = {
   rotateItem: 'KeyR',
   hammer: 'KeyH',
   toggleGrid: 'KeyG',
-  toolSelect: 'KeyS',
-  toolWall: 'KeyW',
-  toolPaint: 'KeyP',
-  toolFloor: 'KeyF',
-  toolDoorWindow: 'KeyD',
+  toolSelect: 'KeyM',
+  toolWall: 'KeyV',
+  toolPaint: 'KeyT',
+  toolFloor: 'KeyL',
+  toolDoorWindow: 'KeyJ',
   catBedroom: 'Digit1',
   catLiving: 'Digit2',
   catKitchen: 'Digit3',
@@ -143,7 +143,7 @@ interface SimsState {
   
   // ATALHOS CUSTOMIZÁVEIS
   keybindings: Record<ShortcutAction, string>;
-  setKeybinding: (action: ShortcutAction, key: string) => void;
+  setKeybinding: (action: ShortcutAction, key: string) => boolean;
   resetKeybindings: () => void;
 
   // NOVO MENU: MARCAÇÕES / ZONAS E TEXTOS LIVRES
@@ -215,6 +215,8 @@ interface SimsState {
   setActiveBuildTool: (tool: BuildTool) => void;
   setWallViewMode: (mode: WallViewMode) => void;
   setIsSetupModalOpen: (open: boolean) => void;
+  isKeybindingsModalOpen: boolean;
+  setIsKeybindingsModalOpen: (open: boolean) => void;
 
   setProjectName: (name: string) => void;
   setProjectDescription: (desc: string) => void;
@@ -354,13 +356,30 @@ export const useSimsStore = create<SimsState>()(
       activeBuildTool: 'wall',
       wallViewMode: 'full',
       isSetupModalOpen: false,
+      isKeybindingsModalOpen: false,
+      setIsKeybindingsModalOpen: (open) => set({ isKeybindingsModalOpen: open }),
 
       // ATALHOS CUSTOMIZÁVEIS
       keybindings: DEFAULT_KEYBINDINGS,
-      setKeybinding: (action, key) =>
-        set((state) => ({
-          keybindings: { ...state.keybindings, [action]: key },
-        })),
+      setKeybinding: (action, key) => {
+        let isSuccess = false;
+        set((state) => {
+          // DUPLICATE PREVENTION: Check if key is already assigned to any OTHER action
+          const conflict = Object.entries(state.keybindings).find(
+            ([act, k]) => act !== action && k.toLowerCase() === key.toLowerCase()
+          );
+
+          if (conflict) {
+            return state; // Reject duplicate key assignment
+          }
+
+          isSuccess = true;
+          return {
+            keybindings: { ...state.keybindings, [action]: key },
+          };
+        });
+        return isSuccess;
+      },
       resetKeybindings: () => set({ keybindings: DEFAULT_KEYBINDINGS }),
 
       // MARCAÇÕES DE ÁREA / ZONAS E TEXTOS LIVRES

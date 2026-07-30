@@ -133,13 +133,34 @@ export function BuildSidebar() {
     },
   ];
 
-  const tools: { id: BuildTool; label: string; shortcut: string; icon: React.ReactNode }[] = [
-    { id: 'select', label: 'Mão (Selecionar)', shortcut: 'S', icon: <Hand className="w-4 h-4" /> },
-    { id: 'wall', label: 'Paredes', shortcut: 'W', icon: <Layers className="w-4 h-4" /> },
-    { id: 'wall_paint', label: 'Pintar Paredes', shortcut: 'P', icon: <Paintbrush className="w-4 h-4" /> },
-    { id: 'floor', label: 'Pisos', shortcut: 'F', icon: <Palette className="w-4 h-4" /> },
-    { id: 'door_window', label: 'Portas/Janelas', shortcut: 'D', icon: <DoorClosed className="w-4 h-4" /> },
-    { id: 'eraser', label: 'Marreta', shortcut: 'H', icon: <Hammer className="w-4 h-4" /> },
+  const { keybindings } = useSimsStore();
+
+  const formatKeyName = (code: string) => {
+    if (!code) return '';
+    if (code.startsWith('Key')) return code.replace('Key', '').toUpperCase();
+    if (code.startsWith('Digit')) return code.replace('Digit', '');
+    return code;
+  };
+
+  const getToolShortcut = (toolId: BuildTool) => {
+    switch (toolId) {
+      case 'select': return formatKeyName(keybindings.toolSelect);
+      case 'wall': return formatKeyName(keybindings.toolWall);
+      case 'wall_paint': return formatKeyName(keybindings.toolPaint);
+      case 'floor': return formatKeyName(keybindings.toolFloor);
+      case 'door_window': return formatKeyName(keybindings.toolDoorWindow);
+      case 'eraser': return formatKeyName(keybindings.hammer);
+      default: return '';
+    }
+  };
+
+  const tools: { id: BuildTool; label: string; icon: React.ReactNode }[] = [
+    { id: 'select', label: 'Mão (Selecionar)', icon: <Hand className="w-4 h-4" /> },
+    { id: 'wall', label: 'Paredes', icon: <Layers className="w-4 h-4" /> },
+    { id: 'wall_paint', label: 'Pintar Paredes', icon: <Paintbrush className="w-4 h-4" /> },
+    { id: 'floor', label: 'Pisos', icon: <Palette className="w-4 h-4" /> },
+    { id: 'door_window', label: 'Portas/Janelas', icon: <DoorClosed className="w-4 h-4" /> },
+    { id: 'eraser', label: 'Marreta', icon: <Hammer className="w-4 h-4" /> },
   ];
 
   return (
@@ -160,6 +181,7 @@ export function BuildSidebar() {
         <div className="grid grid-cols-2 gap-1.5 p-1 bg-slate-950/60 rounded-2xl border border-slate-800">
           {tools.map((t) => {
             const active = activeBuildTool === t.id;
+            const scKey = getToolShortcut(t.id);
             return (
               <button
                 key={t.id}
@@ -177,9 +199,11 @@ export function BuildSidebar() {
                   {t.icon}
                   <span className="truncate">{t.label}</span>
                 </div>
-                <span className="text-[9px] font-mono font-bold opacity-60 bg-slate-950/60 px-1 py-0.5 rounded border border-white/10 shrink-0 ml-1">
-                  [{t.shortcut}]
-                </span>
+                {scKey && (
+                  <span className="text-[9px] font-mono font-bold opacity-60 bg-slate-950/60 px-1 py-0.5 rounded border border-white/10 shrink-0 ml-1">
+                    [{scKey}]
+                  </span>
+                )}
               </button>
             );
           })}
