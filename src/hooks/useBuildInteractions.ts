@@ -57,6 +57,8 @@ export function useBuildInteractions() {
     setPendingFurnitureItem,
     rotatePendingFurnitureItem,
     cancelPendingFurnitureItem,
+    setSelectedDoorWindow,
+    setSelectedAnnotationId,
     addItem,
     updateItemPosition,
     removeItem,
@@ -104,9 +106,15 @@ export function useBuildInteractions() {
       }
 
       if (e.code === 'Escape') {
+        setSelectedWallId(null);
+        setSelectedDoorWindow(null);
         cancelPendingDoor();
         cancelPendingFurnitureItem();
-        setSelectedWallId(null);
+        setSelectedAnnotationId(null);
+
+        if (activeMode === 'build' && activeBuildTool !== 'select') {
+          setActiveBuildTool('select');
+        }
       }
 
       // Atalhos Dinâmicos de Ferramentas de Construção

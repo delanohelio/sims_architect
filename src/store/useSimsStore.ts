@@ -234,7 +234,7 @@ interface SimsState {
   setSelectedFloorColor: (color?: string) => void;
   setSelectedFloorCustomTexture: (url?: string) => void;
 
-  setSelectedDoorWindow: (item: DoorWindowCatalogItem) => void;
+  setSelectedDoorWindow: (item: DoorWindowCatalogItem | null) => void;
   setCustomDoorType: (type: 'door' | 'window') => void;
   setCustomDoorWidth: (width: number) => void;
   setCustomDoorHeight: (height: number) => void;
@@ -546,7 +546,7 @@ export const useSimsStore = create<SimsState>()(
 
       setSelectedDoorWindow: (item) => {
         get().cancelPendingDoor();
-        set({ selectedDoorWindow: item });
+        set({ selectedDoorWindow: item || undefined });
       },
 
       setCustomDoorType: (type) =>
@@ -693,7 +693,7 @@ export const useSimsStore = create<SimsState>()(
             ...wallData,
             id: `wall_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
           };
-          return { walls: [...state.walls, newWall], selectedWallId: newWall.id };
+          return { walls: [...state.walls, newWall], selectedWallId: null };
         }),
 
       updateWall: (id, partial) =>

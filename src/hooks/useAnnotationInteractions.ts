@@ -49,6 +49,7 @@ export function useAnnotationInteractions() {
     setAnnotationLabelPosition,
     setWallLabelOffset,
     setSelectedAnnotationId,
+    setActiveAnnotationTool,
   } = useSimsStore();
 
   const [draftPoints, setDraftPoints] = useState<Point2D[]>([]);
@@ -65,6 +66,10 @@ export function useAnnotationInteractions() {
 
       if (e.key === 'Escape') {
         setDraftPoints([]);
+        setSelectedAnnotationId(null);
+        if (activeAnnotationTool !== 'hand') {
+          setActiveAnnotationTool('hand');
+        }
       } else if (e.key === 'Enter') {
         completeDraftManually();
       }
