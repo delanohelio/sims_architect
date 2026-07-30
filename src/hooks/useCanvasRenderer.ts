@@ -349,9 +349,26 @@ export function useCanvasRenderer(
 
         ctx.restore();
 
-        // Cota de Dimensão Métricas da Parede em Tempo Real (suporta offset customizado via ferramenta de mão)
+        // Se for a parede selecionada, desenha contorno de seleção brilhante
+        const { selectedWallId } = useSimsStore.getState();
+        const isSelected = selectedWallId === wall.id;
+
+        if (isSelected) {
+          ctx.save();
+          ctx.strokeStyle = '#06B6D4';
+          ctx.lineWidth = 14 / viewState.zoom;
+          ctx.lineCap = 'round';
+          ctx.globalAlpha = 0.5;
+          ctx.beginPath();
+          ctx.moveTo(x1, y1);
+          ctx.lineTo(x2, y2);
+          ctx.stroke();
+          ctx.restore();
+        }
+
+        // Cota de Dimensão Métricas da Parede em Tempo Real (mínimo 0.1m)
         const wallLenMeters = Math.hypot(wall.x2 - wall.x1, wall.y2 - wall.y1);
-        if (wallLenMeters > 0.3) {
+        if (wallLenMeters >= 0.05) {
           const midX = ((wall.x1 + wall.x2) / 2 + (wall.labelOffset?.x || 0)) * cellSize;
           const midY = ((wall.y1 + wall.y2) / 2 + (wall.labelOffset?.y || 0)) * cellSize;
           const textStr = `${wallLenMeters.toFixed(2)}m`;
@@ -360,9 +377,9 @@ export function useCanvasRenderer(
           ctx.font = `bold ${Math.max(9, 10 / viewState.zoom)}px Inter, sans-serif`;
           const textWidth = ctx.measureText(textStr).width;
 
-          ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
-          ctx.strokeStyle = '#38BDF8';
-          ctx.lineWidth = 1 / viewState.zoom;
+          ctx.fillStyle = isSelected ? 'rgba(8, 145, 178, 0.95)' : 'rgba(15, 23, 42, 0.85)';
+          ctx.strokeStyle = isSelected ? '#22D3EE' : '#38BDF8';
+          ctx.lineWidth = (isSelected ? 2 : 1) / viewState.zoom;
           ctx.beginPath();
           ctx.roundRect(
             midX - textWidth / 2 - 4 / viewState.zoom,

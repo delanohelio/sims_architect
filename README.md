@@ -14,7 +14,7 @@ O **Sims Architect** é uma aplicação web interativa de arquitetura e design d
 
 ---
 
-## 🚀 Funcionalidades Implementadas (FASE 1, FASE 2, FASE 2.5 & FASE 3)
+## 🚀 Funcionalidades Implementadas
 
 ### 1. ⚙️ Configurações de Terreno & Lote (Modo `settings`)
 - **Dimensões Customizáveis do Lote**: Sliders em tempo real para ajustar Largura (5m a 60m) e Comprimento (5m a 60m) com badge de área total em $m^2$.
@@ -25,148 +25,67 @@ O **Sims Architect** é uma aplicação web interativa de arquitetura e design d
   - *Mansão / Lote Grande* ($25\text{m} \times 40\text{m}$)
 - **Temas de Terreno**: *Grama Sims*, *Blueprint Azul*, *Dark Slate*, *Concreto Urbano*.
 - **Grade Métrica & Snap**: Grid 1m, Subgrid 0.5m, Rótulos de Distância Métricos e Imantação (Snap to Grid).
-- **Proteção de Interação**: No Modo Configurações, nenhuma ferramenta de construção altera a planta. O clique esquerdo realiza exclusivamente **Pan (Movimento de Câmera)**.
+- **Personalização de Atalhos de Teclado**: Painel em Configurações para re-vincular teclas para Zoom, Rotação de Câmera, Rotacionar Móvel, Marreta e Grid.
 
-### 2. 🧱 Modo Construção 2D (`build`)
-- **Construção de Paredes Ortogonais & Diagonais**:
-  - Ponto inicial e final imantados nas interseções do grid métrico.
-  - Badge de distância métrica flutuante em tempo real (ex: `4.5m`).
+### 2. 🧱 Modo Construção 2D (`build`) & Sistema de Paredes Avançado
+- **Construção de Paredes por Arrasto a partir de 0,1m (10cm)**:
+  - Resolução de precisão de **0,1m** para desenhar paredes curtas ou extensas com badge de cota métrica flutuante em tempo real.
+- **Arrasto e Reposicionamento Livre de Paredes**:
+  - Permite clicar sobre qualquer parede com a ferramenta de seleção/mão e arrastá-la livremente pelo terreno $(\Delta x, \Delta y)$.
+  - **Restrição de Limites & Colisão**: Trava os deslocamentos nas bordas do terreno e evita colisão com móveis.
+- **Edição Numérica Direta do Comprimento Exato**:
+  - Painel **Inspetor de Parede Selecionada** que permite digitar o comprimento exato em metros (ex: `0.10m`, `2.50m`, `4.80m`, `12.00m`) e ajustar espessura ($0,05\text{m} \dots 0,80\text{m}$).
 - **Esquadrias (Portas & Janelas Customizáveis)**:
-  - **Fluxo Interativo de Inserção da Porta em 3 Passos**:
-    1. *Posicionamento*: Encaixe do vão na parede.
-    2. *Dobradiça*: Escolha da ponta do pivot (hotspots ciano).
-    3. *Giro de Abertura*: Zona sombreada translúcida do arco de giro (dentro/fora e esquerda/direita).
-  - Janelas com vidro temperado translúcido azulado e reflexo.
-  - **Esquadria Genérica Customizada**: Sliders de largura ($0.5\text{m} \dots 4.0\text{m}$), altura ($0.8\text{m} \dots 3.5\text{m}$) e cor da moldura.
-- **Aplicação de Pisos**:
-  - Catálogo de texturas (Madeira, Mármore, Azulejo, Slate, Grama, Terra).
-  - Pintura de células unitárias ou drag/arraste retangular em lote.
-- **Ferramenta Marreta (Borracha)**:
-  - Apaga paredes, esquadrias, pisos e móveis colocados com highlight vermelho de alvo.
+  - **Fluxo Interativo de Inserção da Porta em 3 Passos** (Posicionamento, Dobradiça, Giro de Abertura).
+  - **Porta de Correr sem Dobradiça (`door_sliding`)**: Instalação em 1 clique com desenho técnico de 2 painéis e setas `↔`.
+  - Janelas com vidro temperado translúcido e reflexo.
+  - **Esquadria Genérica Customizada**: Sliders de largura ($0.5\text{m} \dots 4.0\text{m}$), altura e cor.
+- **Aplicação de Pisos & Pintura Dual-Face**:
+  - Catálogo de texturas (Madeira, Mármore, Azulejo, Slate, Grama, Terra, Cor Sólida, Textura Customizada).
+  - Pintura independente das duas faces da parede (Lado A e Lado B).
 
 ### 3. 🎨 Sistema Global de Cores & Texturas Personalizadas
-- **Seletor Único de Aparência (Cor Sólida vs Textura de Imagem)**:
-  - Escolha clara entre aplicar cor sólida (Hex/Paleta) ou textura de imagem.
-- **Biblioteca Global de Texturas Compartilhada**:
-  - Upload de arquivos de imagem (`.png`, `.jpg`, `.webp`) ou inserção via **Link URL de imagem pública**.
-  - A galeria fica salva no estado global (`customTextures`) e disponível em **Paredes**, **Pisos**, **Terreno** e **Móveis**.
-- **Remoção em Cascata com Fallback Padrão**:
-  - Ao excluir uma textura da galeria, todos os elementos afetados revertem automaticamente para suas cores padrão.
-- **Renderização Pura 100% sem Tonalização**:
-  - Texturas de imagem são renderizadas sobre base neutra `#FFFFFF` no 2D e 3D, mantendo 100% da fidelidade das cores originais.
+- **Biblioteca Global de Texturas Compartilhada**: Upload de imagens ou Links URL salvos no estado global para reuso em Paredes, Pisos, Terreno e Móveis.
+- **Renderização Pura 100% sem Tonalização**: Fidelidade total de cores em 2D e 3D.
 
-### 4. 🖌️ Pintura de Parede Dual-Face com Sombreamento Direto
-- **Pintura Independente das 2 Faces da Parede (Lado A e Lado B)**:
-  - Permite definir cores ou texturas totalmente diferentes no interior e no exterior de cada parede.
-- **Sombreamento de Destaque Visual Alinhado**:
-  - Ao passar o mouse sobre a parede com a ferramenta **Pintar Parede**:
-    - 🟡 **Sombra Central (Estendida além dos dois lados)**: Clique para **Pintar Ambos os Lados**.
-    - 🔵 **Sombra no Lado A (Estendida para fora no Lado A)**: Clique para **Pintar Apenas o Lado A**.
-    - 🟣 **Sombra no Lado B (Estendida para fora no Lado B)**: Clique para **Pintar Apenas o Lado B**.
+### 4. 🛋️ Modo Compra / Mobiliário (`buy`)
+- **Catálogo Multicategoria & Itens Customizados**: Abas temáticas (Quarto, Sala, Cozinha, Banheiro, Exterior, Customizado).
+- **Móvel Genérico Customizado & Rotação Numérica**:
+  - Configuração de Nome, Categoria, Largura, Profundidade, Altura, Formato (Caixa/Cilindro) e Aparência.
+  - Digitação direta do ângulo de rotação de $0^\circ$ a $360^\circ$ ou rotação rápida por tecla (**R**).
 
-### 5. 🛋️ FASE 3: Modo Compra / Mobiliário (`buy`)
-- **Catálogo de Móveis por Categoria & Itens Customizados**:
-  - Abas temáticas: 🛏️ **Quarto**, 🛋️ **Sala**, 🍳 **Cozinha**, 🚿 **Banheiro**, 🌿 **Exterior/Decoração**, 📦 **Customizado**.
-  - **Ajuste de UI sem Scroll Horizontal**: Todo o card do móvel é um botão clicável responsivo, destacando a seleção sem exigir botões extras nem barras de rolagem.
-- **Móvel Genérico Customizado & Salvamento no Catálogo**:
-  - Configuração de **Nome Customizado**, Categoria Específica, Sliders de **Largura ($W$)**, **Profundidade ($D$)** e **Altura ($H$)** ($0.3\text{m} \dots 5.0\text{m}$), **Formato 3D (Caixa / Cilindro)** e **Aparência (Cor ou Textura)**.
-  - **Salvar no Catálogo**: Permite registrar o móvel customizado no catálogo local (com persistência no `localStorage`).
-  - **Exibição Multicategoria com Badge Especial**: O móvel customizado salvo aparece tanto na aba **"Customizado"** quanto na aba da sua **categoria escolhida (ex: Sala, Quarto)**, com borda roxa brilhante e badge `★ Custom` em destaque.
-- **Personalização de Atalhos de Teclado no Painel de Configurações**:
-  - Permite re-vincular qualquer tecla para as ações do sistema: Zoom In, Zoom Out, Resetar Zoom, Rotacionar Câmera Horário/Anti-Horário, Rotacionar Móvel, Ferramenta Marreta e Alternar Grid.
-  - Sincronização instantânea com os ouvintes de evento e atalhos exibidos nas dicas e menus.
-- **Menu e Modo "Marcação" de Áreas, Zonas e Textos Livres (`annotation`)**:
-  - **Rascunho Poligonal de Zonas ao Vivo**: Permite clicar no grid para delimitar ambientes com pré-visualização ao vivo de pontos ($P_1, P_2\dots$) e linhas guia. Suporte às teclas **Enter** (concluir zona) e **Esc** (cancelar rascunho), além de botões interativos no HUD.
-  - **Inclusão de Textos Livres**: Ferramenta de inserção de rótulos de texto customizados (ex: *"Entrada Principal"*, *"Área Gourmet"*) com escolha de cor e tamanho de fonte.
-  - **Estilos de Linha de Contorno**: Seleção entre borda `Contínua`, `Pontilhada` (`dashed`) e `Invisível` (`invisible`).
-  - **Mão de Reposicionamento de Rótulos & Cotas**: Ferramenta interativa que permite clicar e arrastar na tela para reposicionar **rótulos de áreas ($m^2$)**, **textos livres** e **cotas de medidas das paredes**.
-- **Exportação HD (PNG/PDF) com Fidelidade Total de Cores e Auto-Fit Maximizados**:
-  - Renderização offscreen com 100% de precisão de cores e texturas em pisos, paredes (Face A e Face B), esquadrias e móveis.
-  - **Auto-Rotação Inteligente para Máximo Preenchimento**: Terrenos verticais/compridos são automaticamente orientados a $90^\circ$ na prancha horizontal para preencher até **95% da página**, eliminando margens brancas gigantescas.
-  - Seleção da qualidade: **Alta (Impressão 4K / 4096px)**, **Média (HD / 2048px)** e **Baixa (SD / 1024px)**, além de fundo branco limpo.
-- **Digitação Direta do Ângulo de Rotação de Móveis ($0^\circ \dots 360^\circ$)**:
-  - Adicionada caixa de texto numérico para digitação direta do ângulo exato de rotação do móvel (ex: $30^\circ$, $45^\circ$, $135^\circ$, $270^\circ$) na barra lateral ([BuySidebar.tsx](file:///Users/delano/dev/sims-architect/src/components/layout/BuySidebar.tsx)), além dos botões de preset rápido.
-- **Porta Especial de Correr sem Dobradiça (`door_sliding`)**:
-  - Adicionada a **Porta de Correr (Sem Dobradiça)** no catálogo de esquadrias com largura padrão de $1.8\text{m}$.
-  - Instalação direta na parede em 1 clique sem etapas de dobradiça/giro.
-  - Desenho técnico 2D com 2 painéis paralelos e setas indicadoras de deslizamento `↔`, e modelo 3D WebGL com esquadria dupla e vidro transparente.
-- **Atalho de Teclado para Ferramenta de Marreta (`H` / `Delete`)**:
-  - Pressionar a tecla **`H`** (Hammer) ou **`Delete`** em qualquer momento ativa instantaneamente a ferramenta de **Remoção / Marreta (`eraser`)**.
-- **Correção da Seleção de Cor Sólida para Pintura de Pisos (`useSimsStore.ts` & `BuildSidebar.tsx`)**:
-  - **Causa Raiz Identificada**: A action `setSelectedFloorTexture(textureId, color, customUrl)` ao ser chamada sem o 2º parâmetro (`color`) sobrescrevia a cor selecionada com `undefined`, resetando a cor da ferramenta de piso.
-  - **Resolução**: A action `setSelectedFloorTexture` foi corrigida na store para preservar a cor do estado quando não for explicitamente passada como `undefined`. Além disso, a chamada em `BuildSidebar.tsx` passa explicitamente a cor desejada `setSelectedFloorTexture('custom', color, undefined)`, garantindo que a cor sólida selecionada seja mantida ativa.
-  - **Feedback Visual de Cor Ativa**: Adicionado um card com amostra da cor ativa e o código Hexadecimal na lista de opções do catálogo de pisos quando uma cor sólida está pronta para pintar.
-- **Seleção Clara de Cor Sólida, Textura ou Modelo de Catálogo nos Pisos**:
-  - Organizada a barra de ferramentas de pisos em subseções distintas: **Cor Sólida** (qualquer Hexadecimal com paleta rápida), **Textura de Imagem** (Upload ou Link URL com galeria de texturas) e **Modelos Predefinidos do Catálogo** (Madeira Parquet, Mármore, Cerâmica, Slate, Grama, Terra).
-- **Seletor de Tipo para Esquadrias Genéricas (Porta vs Janela)**:
-  - Adicionado o seletor `[ 🚪 Porta ]` vs `[ 🪟 Janela ]` nas opções personalizadas da Esquadria Genérica em ([BuildSidebar.tsx](file:///Users/delano/dev/sims-architect/src/components/layout/BuildSidebar.tsx)).
-  - Ao alternar para **Porta**, aciona o posicionamento em 3 passos (Hinge/Swing) com giro de maçaneta; ao alternar para **Janela**, fixa diretamente o painel de vidro na parede.
-- **Aparência do Terreno em 3 Abas Mutuamente Exclusivas**:
-  - Organizado o painel em ([SettingsSidebar.tsx](file:///Users/delano/dev/sims-architect/src/components/layout/SettingsSidebar.tsx)) em 3 abas claras:
-    1. **Temas**: Presets rápidos de temas (Grama Sims, Blueprint Azul, Dark Slate, Concreto Urbano).
-    2. **2 Cores (Xadrez)**: Seleção independente de **Cor Primária** e **Cor Secundária** com presets de xadrez.
-    3. **Textura**: Aplicação de texturas de imagem enviadas ou em galeria.
-- **Navegação Orbital 3D Completa por Teclado**:
-  - **WASD / Setas**: Pan/Strafe horizontal no terreno 3D.
-  - **Q / E**: Rotação orbital horizontal da câmera (esquerda / direita).
-  - **F / V**: Rotação orbital vertical da câmera (**F = Inclinar para Cima / olhar para baixo**, **V = Inclinar para Baixo / olhar para o horizonte**).
-  - **Z / C**: Zoom In / Zoom Out (Dolly).
-  - **X**: Reseta enquadramento inicial 3D.
-- **Layout Limpo & Sem Extrapolação (`ColorTexturePicker.tsx`)**:
-  - Interface responsiva com seletores de cores sólidas e miniaturas de textura com `onError` fallback para caber perfeitamente no menu lateral sem overflow.
-- **Ghosting, Snap Suave & Rotação Tecla 'R' (Passos de 45°)**:
-  - Fantasma translúcido do móvel segue o cursor do mouse.
-  - Imantação suave a cada $0.1\text{m}$ ($10\text{cm}$) no plano.
-  - Tecla **R**: Rotaciona o móvel em $+45^\circ$ (permite alinhamento ortogonal e em diagonal $45^\circ, 135^\circ, 225^\circ, 315^\circ$), recalculando o Bounding Box $AABB$ tridimensional.
-- **Validação de Colisão Bidirecional AABB em Tempo Real**:
-  - Fantasma **Vermelho** se colidir com paredes ou outros móveis (posição proibida para o móvel).
-  - **Bloqueio de Paredes sobre Móveis**: Tentar construir uma parede em cima de qualquer móvel de compra posicionado exibe o rascunho de parede em **Vermelho** com badge `Bloqueado` e impede a construção.
-- **Mover e Re-rotacionar Móveis Existentes**:
-  - Clicar sobre qualquer móvel posicionado na planta permite selecionar e sair movendo ele pela casa, podendo rotacionar com a tecla **R** e refixar no local desejado.
-- **Renderização 2D (Top-Down Arquitetônico)**:
-  - Ícones 2D minimalistas específicos (travesseiros na cama, almofadas no sofá, divisória da geladeira, vegetação circular).
-- **Renderização 3D (Three.js WebGL Primitivas)**:
-  - Modelos 3D tridimensionais com rotação em radianos, elevação apoiada sobre o piso, texturas de imagem e iluminação solar.
+### 5. 🏷️ Menu "Marcação" (Zonas, Áreas e Textos Livres)
+- **Rascunho Poligonal de Zonas ao Vivo**: Pré-visualização ao vivo de vértices ($P_1, P_2, P_3\dots$) e linhas guia com cálculo automático de área em $m^2$. Suporte a **Enter** (concluir) e **Esc** (cancelar).
+- **Inclusão de Textos Livres**: Ferramenta de rótulos de texto customizados (ex: *"Entrada Principal"*, *"Área Gourmet"*) com cor e tamanho de fonte.
+- **Mão de Reposicionamento**: Arraste interativo de rótulos de áreas ($m^2$), textos livres e cotas de paredes.
 
-### 6. 🧊 Maquete Eletrônica 3D Exclusiva para Inspeção
-- **Tridimensionalidade em Tempo Real**: Renderizada via Three.js WebGL com sombras PCFShadowMap, sol direcional e luz ambiente.
-- **Controle de Visibilidade e Altura das Paredes**:
-  - *Paredes Altas ($2.8\text{m}$)*
-  - *Meia Parede ($1.4\text{m}$)* (com transparência $75\%$)
-  - *Baixar Paredes / Apenas Base ($0.2\text{m}$)*
-- **Sidebar de Inspeção 3D & Métricas do Projeto**:
-  - Exibe resumo em tempo real do lote: $m^2$ de piso pintado, metros lineares de parede construída, total de portas, janelas e móveis colocados.
-
-### 7. 🎮 Navegação por Teclado e Câmera
-- **W / A / S / D**: Pan 2D e Strafe 3D.
-- **Z / C / X**: Zoom In, Zoom Out, Reset.
-- **Q / E**: Rotação de Câmera.
-- **R**: Rotação do Móvel em $90^\circ$ no Modo Compra.
-- **Esc**: Cancelar seleção de móvel ou esquadria.
-- **Espaço / Clique Meio**: Pan com mouse em qualquer modo.
+### 6. 📄 Exportação HD (PNG/PDF) & Prancha Técnica
+- **Fidelidade Total de Cores & Texturas**: Renderização offscreen 4K/HD perfeita.
+- **Auto-Fit Maximizados**: Terrenos verticais/compridos são automaticamente rotacionados em $90^\circ$ para preencher até **95% da página A4**, eliminando margens brancas.
+- **Seleção do Estilo do Fundo**: Escolha entre **Fundo Tema do Terreno** (Grama, Blueprint, Dark, Concreto) ou **Fundo Branco Limpo** para impressão.
+- **PDF Multi-Páginas**: Página 1 com Prancha Arquitetônica HD e Páginas 2+ com Relatório Quantitativo de Materiais & Estruturas.
 
 ---
 
-## 🗃️ Estrutura do Estado Global (`useSimsStore.ts`)
+## 💻 Como Rodar o Projeto Localmente
 
-```ts
-interface SimsState {
-  terrain: TerrainConfig;
-  viewState: ViewState;
-  viewMode: '2d' | '3d';
-  activeMode: 'settings' | 'build' | 'buy' | 'export';
-  activeBuildTool: BuildTool;
-  wallViewMode: WallViewMode;
-  
-  customTextures: CustomTextureItem[];
-  selectedBuyCategory: FurnitureCategory;
-  pendingFurnitureItem: PendingFurniturePlacement | null;
-  
-  walls: Wall[];
-  floors: Record<string, FloorTile>;
-  doorsWindows: DoorWindow[];
-  items: FurnitureItem[];
+```bash
+# 1. Clonar o repositório
+git clone https://github.com/delanodesign/sims-architect.git
+cd sims-architect
 
-  // Métodos do Zustand para manipulação de paredes, pisos, esquadrias e móveis...
-}
+# 2. Instalar as dependências
+npm install
+
+# 3. Iniciar o servidor de desenvolvimento Vite
+npm run dev
+
+# 4. Compilar para produção (TypeScript + Vite)
+npm run build
 ```
+
+---
+
+## 🤖 Guia para IAs Geradoras de Plantas Baixas
+
+O projeto conta com um manual detalhado de instruções para ser entregue a LLMs (ChatGPT, Claude) em [docs/AI_MANUAL.md](file:///Users/delano/dev/sims-architect/docs/AI_MANUAL.md), permitindo que a IA atue como uma **IA Arquiteta** e gere arquivos JSON válidos prontos para importação no Sims Architect.

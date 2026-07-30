@@ -31,6 +31,7 @@ export function CanvasArea() {
   const {
     handlePointerDown,
     handlePointerUp,
+    handlePointerMove: handleBuildPointerMove,
     isSpacePressed,
     draftWall,
     draftFloorRect,
@@ -112,6 +113,8 @@ export function CanvasArea() {
 
   const handlePointerMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
     updateCursorFromEvent(e);
+
+    handleBuildPointerMove();
 
     if (activeMode === 'annotation') {
       handleAnnotationPointerMove();

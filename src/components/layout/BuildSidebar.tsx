@@ -40,6 +40,11 @@ export function BuildSidebar() {
     customDoorFrameColor,
     setCustomDoorFrameColor,
     walls,
+    selectedWallId,
+    setSelectedWallId,
+    updateWall,
+    updateWallLength,
+    removeWall,
     floors,
     doorsWindows,
     pendingDoor,
@@ -176,6 +181,100 @@ export function BuildSidebar() {
 
       {/* Conteúdo Dinâmico por Ferramenta Selecionada */}
       <div className="p-5 space-y-5 flex-1">
+        {/* INSPETOR DE PAREDE SELECIONADA */}
+        {(() => {
+          const selectedWall = walls.find((w) => w.id === selectedWallId);
+          if (!selectedWall) return null;
+          const currentLen = Math.hypot(selectedWall.x2 - selectedWall.x1, selectedWall.y2 - selectedWall.y1);
+
+          return (
+            <div className="p-4 bg-cyan-950/40 rounded-2xl border border-cyan-500/40 space-y-3 animate-in fade-in duration-150 shadow-lg">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-cyan-300 flex items-center gap-1.5">
+                  <Sliders className="w-3.5 h-3.5 text-cyan-400" />
+                  <span>Editar Parede Selecionada</span>
+                </span>
+                <button
+                  onClick={() => setSelectedWallId(null)}
+                  className="text-[10px] text-slate-400 hover:text-white underline"
+                >
+                  Fechar
+                </button>
+              </div>
+
+              {/* Comprimento Numérico Exato */}
+              <div>
+                <div className="flex items-center justify-between text-xs mb-1">
+                  <span className="text-slate-300 font-semibold">Comprimento Exato (m):</span>
+                  <strong className="text-cyan-400 font-mono font-bold text-sm">
+                    {currentLen.toFixed(2)}m
+                  </strong>
+                </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    step="0.1"
+                    min="0.1"
+                    max="50"
+                    value={Number(currentLen.toFixed(2))}
+                    onChange={(e) => {
+                      const val = parseFloat(e.target.value);
+                      if (!isNaN(val) && val >= 0.1) {
+                        updateWallLength(selectedWall.id, val);
+                      }
+                    }}
+                    className="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3 py-1.5 text-xs font-mono font-bold text-cyan-300 outline-none focus:border-cyan-500 transition-all"
+                  />
+                </div>
+
+                {/* Botões Rápidos de Incremento */}
+                <div className="grid grid-cols-4 gap-1 mt-2">
+                  {[-1.0, -0.1, 0.1, 1.0].map((delta) => (
+                    <button
+                      key={delta}
+                      type="button"
+                      onClick={() => {
+                        updateWallLength(selectedWall.id, Math.max(0.1, currentLen + delta));
+                      }}
+                      className="py-1 px-1 bg-slate-800 hover:bg-slate-700 text-[10px] font-mono font-bold text-slate-200 rounded-lg border border-slate-700 transition-colors"
+                    >
+                      {delta > 0 ? `+${delta}m` : `${delta}m`}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Espessura */}
+              <div>
+                <div className="flex items-center justify-between text-xs mb-1">
+                  <span className="text-slate-300 font-semibold">Espessura (m):</span>
+                  <strong className="text-slate-300 font-mono">{(selectedWall.thickness || 0.2).toFixed(2)}m</strong>
+                </div>
+                <input
+                  type="range"
+                  min="0.05"
+                  max="0.80"
+                  step="0.05"
+                  value={selectedWall.thickness || 0.2}
+                  onChange={(e) => updateWall(selectedWall.id, { thickness: parseFloat(e.target.value) })}
+                  className="w-full accent-cyan-400 cursor-pointer"
+                />
+              </div>
+
+              {/* Excluir Parede */}
+              <button
+                onClick={() => {
+                  removeWall(selectedWall.id);
+                  setSelectedWallId(null);
+                }}
+                className="w-full py-2 bg-rose-950/80 hover:bg-rose-900 text-rose-300 border border-rose-800/80 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 mt-1"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Excluir Parede Selecionada</span>
+              </button>
+            </div>
+          );
+        })()}
         {/* ABA: FERRAMENTA DE PAREDES */}
         {activeBuildTool === 'wall' && (
           <div className="space-y-4 animate-in fade-in duration-150">

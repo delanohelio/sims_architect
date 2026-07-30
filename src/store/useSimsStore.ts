@@ -158,8 +158,10 @@ interface SimsState {
 
   customTextures: CustomTextureItem[];
 
+  selectedWallId: string | null;
   selectedWallColor: string;
   selectedWallTexture?: string;
+  setSelectedWallId: (id: string | null) => void;
 
   selectedFloorTexture: FloorTextureId;
   selectedFloorColor?: string;
@@ -267,6 +269,9 @@ interface SimsState {
   setCursorPos: (pos: CursorPosition) => void;
 
   addWall: (wall: Omit<Wall, 'id'>) => void;
+  updateWall: (id: string, partial: Partial<Wall>) => void;
+  moveWall: (id: string, dx: number, dy: number) => void;
+  updateWallLength: (id: string, newLength: number) => void;
   paintWall: (wallId: string, color?: string, textureUrl?: string, side?: 'sideA' | 'sideB') => void;
   removeWall: (id: string) => void;
   clearWalls: () => void;
@@ -649,14 +654,63 @@ export const useSimsStore = create<SimsState>()(
 
       setCursorPos: (pos) => set({ cursorPos: pos }),
 
+      selectedWallId: null,
+      setSelectedWallId: (id) => set({ selectedWallId: id }),
+
       addWall: (wallData) =>
         set((state) => {
           const newWall: Wall = {
             ...wallData,
             id: `wall_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
           };
-          return { walls: [...state.walls, newWall] };
+          return { walls: [...state.walls, newWall], selectedWallId: newWall.id };
         }),
+
+      updateWall: (id, partial) =>
+        set((state) => ({
+          walls: state.walls.map((w) => (w.id === id ? { ...w, ...partial } : w)),
+        })),
+
+      moveWall: (id, dx, dy) =>
+        set((state) => ({
+          walls: state.walls.map((w) => {
+            if (w.id !== id) return w;
+            return {
+              ...w,
+              x1: Number((w.x1 + dx).toFixed(2)),
+              y1: Number((w.y1 + dy).toFixed(2)),
+              x2: Number((w.x2 + dx).toFixed(2)),
+              y2: Number((w.y2 + dy).toFixed(2)),
+            };
+          }),
+        })),
+
+      updateWallLength: (id, newLength) =>
+        set((state) => ({
+          walls: state.walls.map((w) => {
+            if (w.id !== id) return w;
+            const targetLen = Math.max(0.1, Number(newLength.toFixed(2)));
+            const dx = w.x2 - w.x1;
+            const dy = w.y2 - w.y1;
+            const curLen = Math.hypot(dx, dy);
+
+            let ux = 1;
+            let uy = 0;
+            if (curLen > 0.0001) {
+              ux = dx / curLen;
+              uy = dy / curLen;
+            }
+
+            const newX2 = Number((w.x1 + ux * targetLen).toFixed(2));
+            const newY2 = Number((w.y1 + uy * targetLen).toFixed(2));
+
+            return {
+              ...w,
+              x2: newX2,
+              y2: newY2,
+            };
+          }),
+        })),
 
       paintWall: (wallId, color, textureUrl, side) =>
         set((state) => ({

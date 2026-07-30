@@ -16,7 +16,7 @@ Seu objetivo é interpretar o pedido de construção do usuário (ex: "Projete u
 
 2. **REGRAS DE PAREDES (`walls`)**:
    - Uma parede é um segmento reto entre o vértice inicial $(x_1, y_1)$ e o vértice final $(x_2, y_2)$.
-   - Os vértices devem ser números com precisão de $0.5\text{m}$ ou inteiros (ex: $x=2.0$, $y=5.5$).
+   - Os vértices possuem resolução de até $0.1\text{m}$ (10cm) ou números inteiros (ex: $x=2.1$, $y=5.8$), com comprimento mínimo de $0.10\text{m}$.
    - **FECHAMENTO DE CÔMODOS**: Para criar um cômodo fechado, a sequência de paredes deve formar um polígono contínuo onde o vértice final de uma parede coincide exatamente com o vértice inicial da próxima parede.
    - Exemplo de Cômodo de 4m × 4m (do ponto $(2,2)$ ao $(6,6)$):
      - Parede 1 (Norte): $(x_1: 2, y_1: 2) \to (x_2: 6, y_2: 2)$

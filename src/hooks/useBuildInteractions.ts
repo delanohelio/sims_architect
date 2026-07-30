@@ -41,7 +41,10 @@ export function useBuildInteractions() {
     items,
     pendingDoor,
     pendingFurnitureItem,
+    selectedWallId,
+    setSelectedWallId,
     addWall,
+    moveWall,
     paintWall,
     removeWall,
     paintFloorRect,
@@ -61,6 +64,11 @@ export function useBuildInteractions() {
 
   const [isDrawingWall, setIsDrawingWall] = useState(false);
   const [wallStartVertex, setWallStartVertex] = useState<{ x: number; y: number } | null>(null);
+
+  // ARRASTO DE PAREDE INTEIRA COM A MÃO / SELEÇÃO
+  const [isDraggingWall, setIsDraggingWall] = useState(false);
+  const [dragWallId, setDragWallId] = useState<string | null>(null);
+  const [dragWallStartPos, setDragWallStartPos] = useState<{ x: number; y: number } | null>(null);
 
   const [isSelectingFloor, setIsSelectingFloor] = useState(false);
   const [floorStartCell, setFloorStartCell] = useState<{ x: number; y: number } | null>(null);
@@ -86,13 +94,19 @@ export function useBuildInteractions() {
       }
 
       if (e.code === kb.hammer || e.key.toLowerCase() === kb.hammer.replace('Key', '').toLowerCase() || e.code === 'Delete') {
-        setMode('build');
-        setActiveBuildTool('eraser');
+        if (selectedWallId) {
+          removeWall(selectedWallId);
+          setSelectedWallId(null);
+        } else {
+          setMode('build');
+          setActiveBuildTool('eraser');
+        }
       }
 
       if (e.code === 'Escape') {
         cancelPendingDoor();
         cancelPendingFurnitureItem();
+        setSelectedWallId(null);
       }
     };
 
@@ -109,7 +123,7 @@ export function useBuildInteractions() {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
     };
-  }, [rotatePendingFurnitureItem, cancelPendingDoor, cancelPendingFurnitureItem]);
+  }, [rotatePendingFurnitureItem, cancelPendingDoor, cancelPendingFurnitureItem, selectedWallId, removeWall, setSelectedWallId, setMode, setActiveBuildTool]);
 
   // CÁLCULO DE BOUNDING BOX E VALIDAÇÃO DE COLISÃO PARA MÓVEIS
   const getEffectiveFurnitureBounds = (
@@ -146,19 +160,16 @@ export function useBuildInteractions() {
   ): boolean => {
     const bounds = getEffectiveFurnitureBounds(centerX, centerY, width, depth, rotation);
 
-    // 1. Limites do Terreno
     if (bounds.minX < 0 || bounds.maxX > terrain.width || bounds.minY < 0 || bounds.maxY > terrain.length) {
       return false;
     }
 
-    // 2. Colisão com Paredes
     for (const wall of walls) {
       if (lineSegmentIntersectsRect(wall.x1, wall.y1, wall.x2, wall.y2, bounds.minX, bounds.minY, bounds.maxX, bounds.maxY)) {
         return false;
       }
     }
 
-    // 3. Colisão com outros Móveis
     for (const item of items) {
       if (ignoreItemId && item.id === ignoreItemId) continue;
 
@@ -178,7 +189,12 @@ export function useBuildInteractions() {
   };
 
   const isWallPositionValid = (x1: number, y1: number, x2: number, y2: number): boolean => {
-    // Impede construir paredes que colidam com móveis de compra
+    // 1. Limites do Terreno
+    if (x1 < 0 || x1 > terrain.width || y1 < 0 || y1 > terrain.length || x2 < 0 || x2 > terrain.width || y2 < 0 || y2 > terrain.length) {
+      return false;
+    }
+
+    // 2. Colisão com Móveis
     for (const item of items) {
       const bounds = getEffectiveFurnitureBounds(item.x, item.y, item.width, item.depth, item.rotation);
       if (lineSegmentIntersectsRect(x1, y1, x2, y2, bounds.minX, bounds.minY, bounds.maxX, bounds.maxY)) {
@@ -196,7 +212,6 @@ export function useBuildInteractions() {
     const mx = cursorPos.x;
     const my = cursorPos.y;
 
-    // Detecta Móveis no Modo Compra ou Borracha
     for (const item of items) {
       const bounds = getEffectiveFurnitureBounds(item.x, item.y, item.width, item.depth, item.rotation);
       if (mx >= bounds.minX && mx <= bounds.maxX && my >= bounds.minY && my <= bounds.maxY) {
@@ -204,7 +219,6 @@ export function useBuildInteractions() {
       }
     }
 
-    // Detecta Esquadrias
     for (const dw of doorsWindows) {
       const wall = walls.find((w) => w.id === dw.wallId);
       if (wall) {
@@ -216,9 +230,8 @@ export function useBuildInteractions() {
       }
     }
 
-    // Detecta Paredes
     let closestWall: Wall | null = null;
-    let minDistance = 0.4;
+    let minDistance = 0.45;
 
     for (const wall of walls) {
       const dist = pointToSegmentDistance(mx, my, wall.x1, wall.y1, wall.x2, wall.y2);
@@ -232,7 +245,6 @@ export function useBuildInteractions() {
       return { type: 'wall', id: closestWall.id, wall: closestWall };
     }
 
-    // Detecta Pisos
     if (cursorPos.gridX !== null && cursorPos.gridY !== null) {
       const key = `${cursorPos.gridX},${cursorPos.gridY}`;
       if (floors[key]) {
@@ -273,15 +285,64 @@ export function useBuildInteractions() {
     return null;
   };
 
+  // HANDLER DE POINTER MOVE (PARA ARRASTAR PAREDE INTEIRA RESPEITANDO LIMITES E COLISÕES)
+  const handlePointerMove = () => {
+    if (isDraggingWall && dragWallId && dragWallStartPos && cursorPos.x !== null && cursorPos.y !== null) {
+      const step = 0.1;
+      const curX = Math.round(cursorPos.x / step) * step;
+      const curY = Math.round(cursorPos.y / step) * step;
+
+      const dx = Number((curX - dragWallStartPos.x).toFixed(2));
+      const dy = Number((curY - dragWallStartPos.y).toFixed(2));
+
+      if (dx !== 0 || dy !== 0) {
+        const wall = walls.find((w) => w.id === dragWallId);
+        if (wall) {
+          const candX1 = Number((wall.x1 + dx).toFixed(2));
+          const candY1 = Number((wall.y1 + dy).toFixed(2));
+          const candX2 = Number((wall.x2 + dx).toFixed(2));
+          const candY2 = Number((wall.y2 + dy).toFixed(2));
+
+          if (isWallPositionValid(candX1, candY1, candX2, candY2)) {
+            moveWall(dragWallId, dx, dy);
+            setDragWallStartPos({ x: curX, y: curY });
+          }
+        }
+      }
+    }
+  };
+
   // HANDLER DE CLIQUE
   const handlePointerDown = (e: React.PointerEvent) => {
     if (e.button !== 0) return;
+
+    // VERIFICA SE CLICOU EM UMA PAREDE PARA SELECIONAR OU ARRASTAR
+    const hoveredTarget = getHoveredTarget();
+    if (hoveredTarget && hoveredTarget.type === 'wall' && hoveredTarget.wall) {
+      const wall = hoveredTarget.wall;
+      setSelectedWallId(wall.id);
+
+      // Se a ferramenta for 'select' ou 'wall' ou 'hand', inicia o arrasto da parede
+      if (activeBuildTool === 'select' || activeBuildTool === 'wall' || activeMode === 'annotation') {
+        if (cursorPos.x !== null && cursorPos.y !== null) {
+          const step = 0.1;
+          const curX = Math.round(cursorPos.x / step) * step;
+          const curY = Math.round(cursorPos.y / step) * step;
+          setIsDraggingWall(true);
+          setDragWallId(wall.id);
+          setDragWallStartPos({ x: curX, y: curY });
+          return;
+        }
+      }
+    } else if (activeBuildTool !== 'wall_paint' && activeBuildTool !== 'door_window') {
+      setSelectedWallId(null);
+    }
 
     // INTERAÇÃO NO MODO COMPRA (`activeMode === 'buy'`)
     if (activeMode === 'buy') {
       if (pendingFurnitureItem) {
         if (cursorPos.x !== null && cursorPos.y !== null) {
-          const snapStep = 0.1; // Snap leve de 0.1m
+          const snapStep = 0.1;
           const candX = Number((Math.round(cursorPos.x / snapStep) * snapStep).toFixed(2));
           const candY = Number((Math.round(cursorPos.y / snapStep) * snapStep).toFixed(2));
 
@@ -322,7 +383,6 @@ export function useBuildInteractions() {
           }
         }
       } else {
-        // Clicar em um móvel existente para SELECIONAR E MOVER!
         const target = getHoveredTarget();
         if (target && target.type === 'furniture' && target.furniture) {
           const furn = target.furniture;
@@ -348,11 +408,19 @@ export function useBuildInteractions() {
 
     if (activeMode !== 'build') return;
 
-    // 1. FERRAMENTA DE CONSTRUÇÃO DE PAREDES
+    // 1. FERRAMENTA DE CONSTRUÇÃO DE PAREDES POR ARRASTO (RESOLUÇÃO 0,1m)
     if (activeBuildTool === 'wall') {
-      if (cursorPos.snapVertexX !== null && cursorPos.snapVertexY !== null) {
+      const rawX = cursorPos.snapVertexX !== null && cursorPos.x !== null && Math.abs(cursorPos.snapVertexX - cursorPos.x) < 0.15
+        ? cursorPos.snapVertexX
+        : (cursorPos.x !== null ? Math.round(cursorPos.x / 0.1) * 0.1 : null);
+
+      const rawY = cursorPos.snapVertexY !== null && cursorPos.y !== null && Math.abs(cursorPos.snapVertexY - cursorPos.y) < 0.15
+        ? cursorPos.snapVertexY
+        : (cursorPos.y !== null ? Math.round(cursorPos.y / 0.1) * 0.1 : null);
+
+      if (rawX !== null && rawY !== null) {
         setIsDrawingWall(true);
-        setWallStartVertex({ x: cursorPos.snapVertexX, y: cursorPos.snapVertexY });
+        setWallStartVertex({ x: Number(rawX.toFixed(2)), y: Number(rawY.toFixed(2)) });
       }
     }
 
@@ -396,7 +464,7 @@ export function useBuildInteractions() {
       }
     }
 
-    // 4. FERRAMENTA DE PORTAS E JANELAS (3 PASSOS)
+    // 4. FERRAMENTA DE PORTAS E JANELAS
     else if (activeBuildTool === 'door_window') {
       if (pendingDoor) {
         if (pendingDoor.step === 'hinge') {
@@ -508,6 +576,7 @@ export function useBuildInteractions() {
           removeDoorWindow(target.id);
         } else if (target.type === 'wall' && target.id) {
           removeWall(target.id);
+          setSelectedWallId(null);
         } else if (target.type === 'floor' && target.x !== undefined && target.y !== undefined) {
           setIsErasing(true);
           setEraseStartCell({ x: target.x, y: target.y });
@@ -518,6 +587,12 @@ export function useBuildInteractions() {
   };
 
   const handlePointerUp = () => {
+    if (isDraggingWall) {
+      setIsDraggingWall(false);
+      setDragWallId(null);
+      setDragWallStartPos(null);
+    }
+
     if (activeMode !== 'build') {
       setIsDrawingWall(false);
       setWallStartVertex(null);
@@ -528,14 +603,29 @@ export function useBuildInteractions() {
       return;
     }
 
-    if (isDrawingWall && wallStartVertex && cursorPos.snapVertexX !== null && cursorPos.snapVertexY !== null) {
-      if (wallStartVertex.x !== cursorPos.snapVertexX || wallStartVertex.y !== cursorPos.snapVertexY) {
-        if (isWallPositionValid(wallStartVertex.x, wallStartVertex.y, cursorPos.snapVertexX, cursorPos.snapVertexY)) {
+    if (isDrawingWall && wallStartVertex && cursorPos.x !== null && cursorPos.y !== null) {
+      const step = 0.1;
+      const rawEndX = cursorPos.snapVertexX !== null && Math.abs(cursorPos.snapVertexX - cursorPos.x) < 0.15
+        ? cursorPos.snapVertexX
+        : Math.round(cursorPos.x / step) * step;
+
+      const rawEndY = cursorPos.snapVertexY !== null && Math.abs(cursorPos.snapVertexY - cursorPos.y) < 0.15
+        ? cursorPos.snapVertexY
+        : Math.round(cursorPos.y / step) * step;
+
+      const endX = Number(rawEndX.toFixed(2));
+      const endY = Number(rawEndY.toFixed(2));
+
+      const distMeters = Math.hypot(endX - wallStartVertex.x, endY - wallStartVertex.y);
+
+      // Valida se a parede possui comprimento mínimo de 0.1m (10cm)
+      if (distMeters >= 0.1) {
+        if (isWallPositionValid(wallStartVertex.x, wallStartVertex.y, endX, endY)) {
           addWall({
             x1: wallStartVertex.x,
             y1: wallStartVertex.y,
-            x2: cursorPos.snapVertexX,
-            y2: cursorPos.snapVertexY,
+            x2: endX,
+            y2: endY,
             colorSideA: selectedWallColor,
             textureUrlSideA: selectedWallTexture,
             colorSideB: selectedWallColor,
@@ -585,21 +675,40 @@ export function useBuildInteractions() {
         )
       : false;
 
+  // CÁLCULO DA PAREDE EM RASCUNHO (MÍNIMO 0.1m)
+  const getDraftWall = () => {
+    if (!isDrawingWall || !wallStartVertex || cursorPos.x === null || cursorPos.y === null) return null;
+
+    const step = 0.1;
+    const rawEndX = cursorPos.snapVertexX !== null && Math.abs(cursorPos.snapVertexX - cursorPos.x) < 0.15
+      ? cursorPos.snapVertexX
+      : Math.round(cursorPos.x / step) * step;
+
+    const rawEndY = cursorPos.snapVertexY !== null && Math.abs(cursorPos.snapVertexY - cursorPos.y) < 0.15
+      ? cursorPos.snapVertexY
+      : Math.round(cursorPos.y / step) * step;
+
+    const endX = Number(rawEndX.toFixed(2));
+    const endY = Number(rawEndY.toFixed(2));
+
+    const distMeters = Math.hypot(endX - wallStartVertex.x, endY - wallStartVertex.y);
+    const isValid = distMeters >= 0.1 && isWallPositionValid(wallStartVertex.x, wallStartVertex.y, endX, endY);
+
+    return {
+      x1: wallStartVertex.x,
+      y1: wallStartVertex.y,
+      x2: endX,
+      y2: endY,
+      isValid,
+    };
+  };
+
   return {
-    handlePointerMove: () => {},
+    handlePointerMove,
     handlePointerDown,
     handlePointerUp,
     isSpacePressed,
-    draftWall:
-      activeMode === 'build' && isDrawingWall && wallStartVertex && cursorPos.snapVertexX !== null && cursorPos.snapVertexY !== null
-        ? {
-            x1: wallStartVertex.x,
-            y1: wallStartVertex.y,
-            x2: cursorPos.snapVertexX,
-            y2: cursorPos.snapVertexY,
-            isValid: isWallPositionValid(wallStartVertex.x, wallStartVertex.y, cursorPos.snapVertexX, cursorPos.snapVertexY),
-          }
-        : null,
+    draftWall: getDraftWall(),
     draftFloorRect:
       activeMode === 'build' && isSelectingFloor && floorStartCell && cursorPos.gridX !== null && cursorPos.gridY !== null
         ? {
@@ -662,7 +771,6 @@ function projectPointOntoSegment(px: number, py: number, x1: number, y1: number,
   };
 }
 
-// AUXILIAR DE INTERSEÇÃO ENTRE SEGMENTO DE LINHA E RETÂNGULO
 function lineSegmentIntersectsRect(
   x1: number,
   y1: number,
