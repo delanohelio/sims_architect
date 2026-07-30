@@ -759,17 +759,70 @@ export function useCanvasRenderer(
             ctx.lineTo(ptsPx[i].x, ptsPx[i].y);
           }
 
-          // Linha de guia até a posição atual do cursor
+          // Linha de guia até a posição atual do cursor (com snap de 0,1m + atração magnética de paredes)
           if (cursorPos.x !== null && cursorPos.y !== null) {
-            const curPxX = (cursorPos.snapVertexX ?? cursorPos.x) * cellSize;
-            const curPxY = (cursorPos.snapVertexY ?? cursorPos.y) * cellSize;
+            const { walls: allWalls } = useSimsStore.getState();
+
+            // Atração magnética para vértices de parede (raio 0.18m)
+            let snapCurX = Number((Math.round(cursorPos.x / 0.1) * 0.1).toFixed(2));
+            let snapCurY = Number((Math.round(cursorPos.y / 0.1) * 0.1).toFixed(2));
+            for (const w of allWalls) {
+              if (Math.hypot(cursorPos.x - w.x1, cursorPos.y - w.y1) <= 0.18) {
+                snapCurX = w.x1; snapCurY = w.y1; break;
+              }
+              if (Math.hypot(cursorPos.x - w.x2, cursorPos.y - w.y2) <= 0.18) {
+                snapCurX = w.x2; snapCurY = w.y2; break;
+              }
+            }
+
+            const curPxX = snapCurX * cellSize;
+            const curPxY = snapCurY * cellSize;
             ctx.lineTo(curPxX, curPxY);
 
             if (ptsPx.length >= 3) {
               ctx.lineTo(ptsPx[0].x, ptsPx[0].y);
             }
+            ctx.stroke();
+
+            // Indicador de snap no ponto de destino (bolinha pulsante)
+            ctx.setLineDash([]);
+            ctx.fillStyle = 'rgba(16, 185, 129, 0.6)';
+            ctx.strokeStyle = '#FFFFFF';
+            ctx.lineWidth = 1.5 / viewState.zoom;
+            ctx.beginPath();
+            ctx.arc(curPxX, curPxY, 5 / viewState.zoom, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+
+            // Badge de distância do último ponto até o cursor
+            const lastPt = dpts[dpts.length - 1];
+            const segDist = Math.hypot(snapCurX - lastPt.x, snapCurY - lastPt.y);
+            if (segDist >= 0.05) {
+              const midPxX = (ptsPx[ptsPx.length - 1].x + curPxX) / 2;
+              const midPxY = (ptsPx[ptsPx.length - 1].y + curPxY) / 2;
+              const distStr = `${segDist.toFixed(2)}m`;
+
+              ctx.font = `bold ${Math.max(9, 10 / viewState.zoom)}px monospace`;
+              const tw = ctx.measureText(distStr).width;
+              const bw = tw + 10 / viewState.zoom;
+              const bh = 16 / viewState.zoom;
+
+              ctx.fillStyle = 'rgba(6, 78, 59, 0.9)';
+              ctx.strokeStyle = '#10B981';
+              ctx.lineWidth = 1.5 / viewState.zoom;
+              ctx.beginPath();
+              ctx.roundRect(midPxX - bw / 2, midPxY - bh / 2, bw, bh, 3 / viewState.zoom);
+              ctx.fill();
+              ctx.stroke();
+
+              ctx.fillStyle = '#D1FAE5';
+              ctx.textAlign = 'center';
+              ctx.textBaseline = 'middle';
+              ctx.fillText(distStr, midPxX, midPxY);
+            }
+          } else {
+            ctx.stroke();
           }
-          ctx.stroke();
 
           // Desenha os nós / vértices numerados P1, P2, P3...
           ptsPx.forEach((pt, idx) => {
