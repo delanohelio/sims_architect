@@ -97,10 +97,10 @@ export function ExportSidebar() {
   };
 
   // Obtém o DataURL seguro da planta baixa com Cotas Métricas e Qualidade Escolhida
-  const getSafePlanDataUrl = (overrideQuality?: ExportQuality, overrideWhiteBg?: boolean): string => {
+  const getSafePlanDataUrl = async (overrideQuality?: ExportQuality, overrideWhiteBg?: boolean): Promise<string> => {
     setViewMode('2d');
     const domCanvas = (document.getElementById('sims-canvas-2d') as HTMLCanvasElement) || document.querySelector('canvas');
-    return exportPlanToDataUrl(domCanvas, {
+    return await exportPlanToDataUrl(domCanvas, {
       terrain,
       walls,
       floors,
@@ -115,9 +115,9 @@ export function ExportSidebar() {
   };
 
   // 3. EXPORTAR PLANTA BAIXA (PNG)
-  const handleExportPNG = () => {
+  const handleExportPNG = async () => {
     try {
-      const dataUrl = getSafePlanDataUrl();
+      const dataUrl = await getSafePlanDataUrl();
       const link = document.createElement('a');
       link.href = dataUrl;
       const safeName = (projectName || 'planta-baixa').toLowerCase().replace(/[^a-z0-9]/g, '-');
@@ -134,10 +134,10 @@ export function ExportSidebar() {
   };
 
   // 4. EXPORTAR PDF MULTI-PÁGINAS (PÁG 1: PLANTA EM ALTA RESOLUÇÃO; PÁG 2+: MARCAÇÕES E RELATÓRIO DE MATERIAIS)
-  const handleExportPDF = () => {
+  const handleExportPDF = async () => {
     try {
       // Gera com alta qualidade respeitando o estilo de fundo escolhido pelo usuário (Fundo Tema vs Fundo Branco)
-      const imgData = getSafePlanDataUrl('high');
+      const imgData = await getSafePlanDataUrl('high');
 
       const pdf = new jsPDF({
         orientation: 'landscape',

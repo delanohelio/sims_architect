@@ -68,7 +68,7 @@ const THEME_PRESETS: Record<TerrainTheme, ThemeStyles> = {
   },
 };
 
-const FLOOR_COLORS: Record<FloorTextureId, { fill: string; border: string; accent?: string }> = {
+export const FLOOR_COLORS: Record<FloorTextureId, { fill: string; border: string; accent?: string }> = {
   wood: { fill: '#78350F', border: '#451A03', accent: '#92400E' },
   marble: { fill: '#F1F5F9', border: '#CBD5E1', accent: '#94A3B8' },
   tile: { fill: '#475569', border: '#334155', accent: '#64748B' },

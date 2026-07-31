@@ -1,5 +1,6 @@
 import type { TerrainConfig, Wall, FloorTile, DoorWindow, FurnitureItem, ZoneAnnotation, ExportQuality } from '../types/sims';
 import { calculatePolygonArea, calculatePolygonCentroid } from '../hooks/useAnnotationInteractions';
+import { FLOOR_COLORS } from '../hooks/useCanvasRenderer';
 
 interface ExportPlanParams {
   terrain: TerrainConfig;
@@ -23,13 +24,67 @@ const THEME_COLORS: Record<string, { bg: string; fill: string; sec: string }> = 
 };
 
 /**
+ * Carregador assíncrono de imagem por URL / DataURL
+ */
+function loadImage(url?: string): Promise<HTMLImageElement | null> {
+  if (!url) return Promise.resolve(null);
+  return new Promise((resolve) => {
+    const img = new Image();
+    if (!url.startsWith('data:')) {
+      img.crossOrigin = 'anonymous';
+    }
+    img.onload = () => resolve(img);
+    img.onerror = () => resolve(null);
+    img.src = url;
+  });
+}
+
+/**
+ * Pré-carrega todas as imagens de texturas customizadas presentes no terreno, pisos, paredes e objetos.
+ */
+async function preloadAllTextures(
+  terrain: TerrainConfig,
+  walls: Wall[],
+  floors: Record<string, FloorTile>,
+  items: FurnitureItem[]
+): Promise<Map<string, HTMLImageElement>> {
+  const urls = new Set<string>();
+
+  if (terrain.customTextureUrl) urls.add(terrain.customTextureUrl);
+
+  Object.values(floors).forEach((f) => {
+    if (f.customTextureUrl) urls.add(f.customTextureUrl);
+  });
+
+  walls.forEach((w) => {
+    if (w.textureUrlSideA) urls.add(w.textureUrlSideA);
+    if (w.textureUrlSideB) urls.add(w.textureUrlSideB);
+    if (w.textureUrl) urls.add(w.textureUrl);
+  });
+
+  items.forEach((i) => {
+    if (i.textureUrl) urls.add(i.textureUrl);
+  });
+
+  const cache = new Map<string, HTMLImageElement>();
+  await Promise.all(
+    Array.from(urls).map(async (url) => {
+      const img = await loadImage(url);
+      if (img) cache.set(url, img);
+    })
+  );
+
+  return cache;
+}
+
+/**
   Renderiza e extrai o DataURL seguro da planta baixa com Fidelidade Total de Cores,
   Cotas Métricas, Marcações de Área, Textos Livres, Escolha de Fundo (Tema vs Branco) e Enquadramento Máximo (Auto-Fit & Rotação).
  */
-export function exportPlanToDataUrl(
+export async function exportPlanToDataUrl(
   _domCanvas: HTMLCanvasElement | null,
   params: ExportPlanParams
-): string {
+): Promise<string> {
   const {
     terrain,
     walls,
@@ -43,6 +98,9 @@ export function exportPlanToDataUrl(
     useWhiteBackground = false,
     autoRotateForMaxFill = true,
   } = params;
+
+  // Pré-carrega texturas de imagens antes de desenhar
+  const loadedTextures = await preloadAllTextures(terrain, walls, floors, items);
 
   // Resolução com base no nível de qualidade selecionado
   let widthPx = 2048;
@@ -106,15 +164,23 @@ export function exportPlanToDataUrl(
     ctx.fillStyle = '#F8FAFC';
     ctx.fillRect(0, 0, rawTerrainW, rawTerrainH);
   } else {
-    ctx.fillStyle = terrain.customColor || themeColors.fill;
+    const terrainImg = terrain.customTextureUrl ? loadedTextures.get(terrain.customTextureUrl) : null;
+    if (terrainImg) {
+      const pattern = ctx.createPattern(terrainImg, 'repeat');
+      ctx.fillStyle = pattern || terrain.customColor || themeColors.fill;
+    } else {
+      ctx.fillStyle = terrain.customColor || themeColors.fill;
+    }
     ctx.fillRect(0, 0, rawTerrainW, rawTerrainH);
 
     const secColor = terrain.customSecondaryColor || themeColors.sec;
-    ctx.fillStyle = secColor;
-    for (let x = 0; x < terrain.width; x++) {
-      for (let y = 0; y < terrain.length; y++) {
-        if ((x + y) % 2 === 1) {
-          ctx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
+    if (secColor && !terrain.customTextureUrl) {
+      ctx.fillStyle = secColor;
+      for (let x = 0; x < terrain.width; x++) {
+        for (let y = 0; y < terrain.length; y++) {
+          if ((x + y) % 2 === 1) {
+            ctx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
+          }
         }
       }
     }
@@ -125,16 +191,28 @@ export function exportPlanToDataUrl(
   ctx.lineWidth = 3 / scale;
   ctx.strokeRect(0, 0, rawTerrainW, rawTerrainH);
 
-  // C. Pisos Pintados com Fidelidade Total de Cores
+  // C. Pisos Pintados com Fidelidade Total de Cores e Texturas
   Object.values(floors).forEach((floor) => {
-    ctx.fillStyle = floor.color || '#78350F';
-    ctx.fillRect(floor.x * cellSize, floor.y * cellSize, cellSize, cellSize);
-    ctx.strokeStyle = 'rgba(0, 0, 0, 0.15)';
+    const floorStyle = FLOOR_COLORS[floor.textureId] || FLOOR_COLORS.wood;
+    const px = floor.x * cellSize;
+    const py = floor.y * cellSize;
+
+    const floorImg = floor.customTextureUrl ? loadedTextures.get(floor.customTextureUrl) : null;
+    if (floorImg) {
+      const pattern = ctx.createPattern(floorImg, 'repeat');
+      ctx.fillStyle = pattern || floor.color || floorStyle.fill;
+    } else {
+      ctx.fillStyle = floor.color || floorStyle.fill;
+    }
+
+    ctx.fillRect(px, py, cellSize, cellSize);
+
+    ctx.strokeStyle = floorStyle.border;
     ctx.lineWidth = 1 / scale;
-    ctx.strokeRect(floor.x * cellSize, floor.y * cellSize, cellSize, cellSize);
+    ctx.strokeRect(px, py, cellSize, cellSize);
   });
 
-  // D. Paredes Dual-Face com Fidelidade Total de Cores
+  // D. Paredes Dual-Face com Fidelidade Total de Cores e Texturas
   walls.forEach((wall) => {
     const x1 = wall.x1 * cellSize;
     const y1 = wall.y1 * cellSize;
@@ -157,7 +235,14 @@ export function exportPlanToDataUrl(
     ctx.lineTo(x2 + nx * halfW, y2 + ny * halfW);
     ctx.lineTo(x1 + nx * halfW, y1 + ny * halfW);
     ctx.closePath();
-    ctx.fillStyle = wall.colorSideA || wall.color || '#E2E8F0';
+
+    const imgAUrl = wall.textureUrlSideA || wall.textureUrl;
+    const imgA = imgAUrl ? loadedTextures.get(imgAUrl) : null;
+    if (imgA) {
+      ctx.fillStyle = ctx.createPattern(imgA, 'repeat') || wall.colorSideA || wall.color || '#E2E8F0';
+    } else {
+      ctx.fillStyle = wall.colorSideA || wall.color || '#E2E8F0';
+    }
     ctx.fill();
     ctx.restore();
 
@@ -169,7 +254,14 @@ export function exportPlanToDataUrl(
     ctx.lineTo(x2 - nx * halfW, y2 - ny * halfW);
     ctx.lineTo(x1 - nx * halfW, y1 - ny * halfW);
     ctx.closePath();
-    ctx.fillStyle = wall.colorSideB || wall.color || '#CBD5E1';
+
+    const imgBUrl = wall.textureUrlSideB || wall.textureUrl;
+    const imgB = imgBUrl ? loadedTextures.get(imgBUrl) : null;
+    if (imgB) {
+      ctx.fillStyle = ctx.createPattern(imgB, 'repeat') || wall.colorSideB || wall.color || '#CBD5E1';
+    } else {
+      ctx.fillStyle = wall.colorSideB || wall.color || '#CBD5E1';
+    }
     ctx.fill();
     ctx.restore();
 
@@ -212,7 +304,7 @@ export function exportPlanToDataUrl(
     }
   });
 
-  // E. Esquadrias (Portas e Janelas)
+  // E. Esquadrias (Portas e Janelas) com Molduras Personalizadas e Giro
   doorsWindows.forEach((dw) => {
     const wall = walls.find((w) => w.id === dw.wallId);
     if (!wall) return;
@@ -234,19 +326,47 @@ export function exportPlanToDataUrl(
     const isSliding = dw.isSliding || dw.catalogId === 'door_sliding';
 
     if (isSliding) {
-      ctx.fillStyle = '#10B981';
+      ctx.strokeStyle = dw.frameColor || '#10B981';
+      ctx.lineWidth = 2.5;
+
+      ctx.fillStyle = dw.frameColor || '#10B981';
       ctx.fillRect(-dwWidthPx / 2, -6, dwWidthPx / 2 + 2, 5);
       ctx.fillStyle = '#38BDF8';
       ctx.fillRect(-2, 1, dwWidthPx / 2 + 2, 5);
       ctx.strokeStyle = '#FFFFFF';
       ctx.lineWidth = 1.5;
       ctx.strokeRect(-dwWidthPx / 2, -6, dwWidthPx, 12);
-    } else {
-      ctx.fillStyle = dw.type === 'door' ? (dw.frameColor || '#F59E0B') : '#38BDF8';
+    } else if (dw.type === 'door') {
+      ctx.strokeStyle = dw.frameColor || '#F59E0B';
+      ctx.lineWidth = 2.5;
+
+      const hingeX = dw.flipSwing ? dwWidthPx / 2 : -dwWidthPx / 2;
+
+      ctx.fillStyle = dw.frameColor || '#F59E0B';
       ctx.fillRect(-dwWidthPx / 2, -5, dwWidthPx, 10);
       ctx.strokeStyle = '#FFFFFF';
       ctx.lineWidth = 1.5;
       ctx.strokeRect(-dwWidthPx / 2, -5, dwWidthPx, 10);
+
+      // Arco de Giro da Porta
+      ctx.strokeStyle = dw.frameColor ? `${dw.frameColor}AA` : 'rgba(245, 158, 11, 0.6)';
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([3, 3]);
+      ctx.beginPath();
+      ctx.arc(hingeX, 0, dwWidthPx, dw.flipSide ? 0 : -Math.PI / 2, dw.flipSide ? Math.PI / 2 : 0);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    } else {
+      ctx.fillStyle = 'rgba(6, 182, 212, 0.4)';
+      ctx.fillRect(-dwWidthPx / 2, -4, dwWidthPx, 8);
+      ctx.strokeStyle = dw.frameColor || '#38BDF8';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(-dwWidthPx / 2, -4, dwWidthPx, 8);
+
+      ctx.beginPath();
+      ctx.moveTo(0, -4);
+      ctx.lineTo(0, 4);
+      ctx.stroke();
     }
 
     const dimText = dw.height ? `${dw.width}m × ${dw.height}m` : `${dw.width}m`;
@@ -263,7 +383,7 @@ export function exportPlanToDataUrl(
     ctx.restore();
   });
 
-  // F. Móveis Colocados com Fidelidade Total de Cores
+  // F. Móveis Colocados com Fidelidade Total de Cores e Texturas
   items.forEach((item) => {
     const itemPxX = item.x * cellSize;
     const itemPxY = item.y * cellSize;
@@ -274,7 +394,14 @@ export function exportPlanToDataUrl(
     ctx.translate(itemPxX, itemPxY);
     ctx.rotate((item.rotation * Math.PI) / 180);
 
-    ctx.fillStyle = item.color || '#64748B';
+    const itemImg = item.textureUrl ? loadedTextures.get(item.textureUrl) : null;
+    if (itemImg) {
+      const pattern = ctx.createPattern(itemImg, 'repeat');
+      ctx.fillStyle = pattern || item.color || '#64748B';
+    } else {
+      ctx.fillStyle = item.color || '#64748B';
+    }
+
     ctx.beginPath();
     if (item.primitiveShape === 'cylinder') {
       ctx.ellipse(0, 0, itemPxW / 2, itemPxD / 2, 0, 0, Math.PI * 2);
@@ -432,3 +559,4 @@ export function exportPlanToDataUrl(
 
   return offscreen.toDataURL('image/png');
 }
+
