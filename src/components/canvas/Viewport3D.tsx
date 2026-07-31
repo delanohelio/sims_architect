@@ -2,15 +2,30 @@ import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { useSimsStore } from '../../store/useSimsStore';
-import type { FloorTextureId } from '../../types/sims';
 
-const FLOOR_COLORS_3D: Record<FloorTextureId, number> = {
+
+const FLOOR_COLORS_3D: Record<string, number> = {
   wood: 0x78350f,
+  tex_wood: 0x78350f,
+  wood_dark: 0x451a03,
+  tex_wood_dark: 0x451a03,
   marble: 0xf1f5f9,
+  tex_marble: 0xf1f5f9,
   tile: 0x475569,
+  tile_blue: 0x0284c7,
+  tex_tile_blue: 0x0284c7,
   slate: 0x0f172a,
   grass: 0x047857,
+  tex_grass: 0x047857,
   dirt: 0x451a03,
+  brick: 0x991b1b,
+  tex_brick: 0x991b1b,
+  metal_inox: 0x64748b,
+  tex_metal_inox: 0x64748b,
+  fabric_blue: 0x1e40af,
+  tex_fabric_blue: 0x1e40af,
+  fabric_purple: 0x6b21a8,
+  tex_fabric_purple: 0x6b21a8,
   custom: 0x0ea5e9,
 };
 

@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useSimsStore } from '../store/useSimsStore';
-import type { TerrainTheme, FloorTextureId, Wall, FurnitureItem } from '../types/sims';
+import type { TerrainTheme, Wall, FurnitureItem } from '../types/sims';
 
 interface ThemeStyles {
   bg: string;
@@ -68,13 +68,51 @@ const THEME_PRESETS: Record<TerrainTheme, ThemeStyles> = {
   },
 };
 
-export const FLOOR_COLORS: Record<FloorTextureId, { fill: string; border: string; accent?: string }> = {
+export const PRESET_TEXTURE_URLS: Record<string, string> = {
+  wood: '/textures/wood.svg',
+  tex_wood: '/textures/wood.svg',
+  wood_dark: '/textures/wood_dark.svg',
+  tex_wood_dark: '/textures/wood_dark.svg',
+  marble: '/textures/marble.svg',
+  tex_marble: '/textures/marble.svg',
+  tile: '/textures/tile_blue.svg',
+  tile_blue: '/textures/tile_blue.svg',
+  tex_tile_blue: '/textures/tile_blue.svg',
+  slate: '/textures/slate.svg',
+  grass: '/textures/grass.svg',
+  tex_grass: '/textures/grass.svg',
+  brick: '/textures/brick_red.svg',
+  tex_brick: '/textures/brick_red.svg',
+  metal_inox: '/textures/metal_inox.svg',
+  tex_metal_inox: '/textures/metal_inox.svg',
+  fabric_blue: '/textures/fabric_blue.svg',
+  tex_fabric_blue: '/textures/fabric_blue.svg',
+  fabric_purple: '/textures/fabric_purple.svg',
+  tex_fabric_purple: '/textures/fabric_purple.svg',
+};
+
+export const FLOOR_COLORS: Record<string, { fill: string; border: string; accent?: string }> = {
   wood: { fill: '#78350F', border: '#451A03', accent: '#92400E' },
+  tex_wood: { fill: '#78350F', border: '#451A03', accent: '#92400E' },
+  wood_dark: { fill: '#451A03', border: '#292524', accent: '#78350F' },
+  tex_wood_dark: { fill: '#451A03', border: '#292524', accent: '#78350F' },
   marble: { fill: '#F1F5F9', border: '#CBD5E1', accent: '#94A3B8' },
+  tex_marble: { fill: '#F1F5F9', border: '#CBD5E1', accent: '#94A3B8' },
   tile: { fill: '#475569', border: '#334155', accent: '#64748B' },
+  tile_blue: { fill: '#0284C7', border: '#0369A1', accent: '#38BDF8' },
+  tex_tile_blue: { fill: '#0284C7', border: '#0369A1', accent: '#38BDF8' },
   slate: { fill: '#0F172A', border: '#06B6D4', accent: '#1E293B' },
   grass: { fill: '#047857', border: '#065F46', accent: '#10B981' },
+  tex_grass: { fill: '#047857', border: '#065F46', accent: '#10B981' },
   dirt: { fill: '#451A03', border: '#292524', accent: '#78350F' },
+  brick: { fill: '#991B1B', border: '#7F1D1D', accent: '#B91C1C' },
+  tex_brick: { fill: '#991B1B', border: '#7F1D1D', accent: '#B91C1C' },
+  metal_inox: { fill: '#64748B', border: '#475569', accent: '#94A3B8' },
+  tex_metal_inox: { fill: '#64748B', border: '#475569', accent: '#94A3B8' },
+  fabric_blue: { fill: '#1E40AF', border: '#1E3A8A', accent: '#3B82F6' },
+  tex_fabric_blue: { fill: '#1E40AF', border: '#1E3A8A', accent: '#3B82F6' },
+  fabric_purple: { fill: '#6B21A8', border: '#581C87', accent: '#9333EA' },
+  tex_fabric_purple: { fill: '#6B21A8', border: '#581C87', accent: '#9333EA' },
   custom: { fill: '#0EA5E9', border: '#0284C7', accent: '#38BDF8' },
 };
 
@@ -224,7 +262,8 @@ export function useCanvasRenderer(
         const px = floor.x * cellSize;
         const py = floor.y * cellSize;
 
-        const floorImg = getLoadedImage(floor.customTextureUrl);
+        const textureUrl = floor.customTextureUrl || PRESET_TEXTURE_URLS[floor.textureId];
+        const floorImg = getLoadedImage(textureUrl);
         if (floorImg) {
           const pattern = ctx.createPattern(floorImg, 'repeat');
           ctx.fillStyle = pattern || floor.color || floorStyle.fill;
@@ -605,8 +644,8 @@ export function useCanvasRenderer(
         }
         ctx.closePath();
 
-        // Preenchimento translúcido
-        ctx.fillStyle = ann.fillColor || (ann.color ? `${ann.color}22` : 'rgba(16, 185, 129, 0.15)');
+        // Preenchimento translúcido vibrante
+        ctx.fillStyle = ann.fillColor || (ann.color ? `${ann.color}44` : 'rgba(16, 185, 129, 0.25)');
         ctx.fill();
 
         // Contorno (solid, dashed, invisible)

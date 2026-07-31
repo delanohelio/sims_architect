@@ -1,6 +1,6 @@
 import type { TerrainConfig, Wall, FloorTile, DoorWindow, FurnitureItem, ZoneAnnotation, ExportQuality } from '../types/sims';
 import { calculatePolygonArea, calculatePolygonCentroid } from '../hooks/useAnnotationInteractions';
-import { FLOOR_COLORS } from '../hooks/useCanvasRenderer';
+import { FLOOR_COLORS, PRESET_TEXTURE_URLS } from '../hooks/useCanvasRenderer';
 
 interface ExportPlanParams {
   terrain: TerrainConfig;
@@ -54,6 +54,8 @@ async function preloadAllTextures(
 
   Object.values(floors).forEach((f) => {
     if (f.customTextureUrl) urls.add(f.customTextureUrl);
+    const presetUrl = PRESET_TEXTURE_URLS[f.textureId];
+    if (presetUrl) urls.add(presetUrl);
   });
 
   walls.forEach((w) => {
@@ -197,7 +199,8 @@ export async function exportPlanToDataUrl(
     const px = floor.x * cellSize;
     const py = floor.y * cellSize;
 
-    const floorImg = floor.customTextureUrl ? loadedTextures.get(floor.customTextureUrl) : null;
+    const textureUrl = floor.customTextureUrl || PRESET_TEXTURE_URLS[floor.textureId];
+    const floorImg = textureUrl ? loadedTextures.get(textureUrl) : null;
     if (floorImg) {
       const pattern = ctx.createPattern(floorImg, 'repeat');
       ctx.fillStyle = pattern || floor.color || floorStyle.fill;
@@ -474,7 +477,7 @@ export async function exportPlanToDataUrl(
     }
     ctx.closePath();
 
-    ctx.fillStyle = ann.fillColor || (ann.color ? `${ann.color}22` : 'rgba(16, 185, 129, 0.15)');
+    ctx.fillStyle = ann.fillColor || (ann.color ? `${ann.color}44` : 'rgba(16, 185, 129, 0.25)');
     ctx.fill();
 
     if (ann.lineStyle !== 'invisible') {
